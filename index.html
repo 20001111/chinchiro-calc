@@ -1,121 +1,211 @@
-// チンチロ計算アプリ（レート可変・複数人対応・スマホ対応）
+// チンチロ計算アプリ v2  (スマホ対応・ボタン入力・自動計算・親タグ切替)
+// 作者: ChatGPT 2025-06-28
+
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>チンチロ計算機（可変レート対応）</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>チンチロ計算アプリ v2</title>
   <style>
+    * { box-sizing: border-box; }
     body {
       font-family: sans-serif;
       margin: 10px;
       padding: 10px;
     }
-    input[type=number] {
-      width: 60px;
-      margin: 3px;
-    }
-    button {
-      margin-top: 10px;
-      padding: 10px;
+    h2 { margin-bottom: 10px; }
+    input, button, select {
       font-size: 16px;
+      padding: 6px 8px;
+      margin: 4px 2px;
     }
-    h2, h4 {
-      margin-bottom: 5px;
+    .hidden { display: none; }
+    .player-row {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 6px;
+      margin-bottom: 8px;
     }
-    #results {
-      margin-top: 20px;
+    .parent-tag {
+      background: gold;
+      color: #000;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-left: 4px;
+    }
+    .balance {
+      font-weight: bold;
+      margin-left: 6px;
+    }
+    .outcome-btn {
+      padding: 4px 6px;
+      margin: 2px;
+      font-size: 14px;
+    }
+    #outcomePanel {
+      margin-top: 12px;
     }
   </style>
 </head>
 <body>
-  <h2>チンチロ計算（レートと人数設定可）</h2>
+  <h2>チンチロ計算アプリ</h2>
 
-  <label>レート（円）:<br><input type="number" id="rate" value="1000" min="1"></label><br><br>
-  <label>プレイヤー人数:<br><input type="number" id="numPlayers" value="2" min="2"></label><br><br>
-  <label>親の番号（1〜人数）:<br><input type="number" id="oyaIndex" value="1" min="1"></label><br><br>
+  <!-- === セットアップステップ === -->
+  <div id="setupStep">
+    <label>レート (円)：<input type="number" id="rateInput" value="1000" min="1"></label><br><br>
+    <label>プレイヤー人数：<input type="number" id="playerCount" value="2" min="2"></label><br><br>
+    <button id="toNameStep">次へ (名前入力)</button>
+  </div>
 
-  <div id="playersInput"></div>
+  <!-- === 名前入力ステップ === -->
+  <div id="nameStep" class="hidden">
+    <h3>プレイヤーの名前を入力</h3>
+    <div id="nameInputs"></div>
+    <button id="startGame">ゲーム開始</button>
+  </div>
 
-  <button onclick="generateInputs()">プレイヤー入力欄を作成</button>
-  <button onclick="calculateAll()">判定実行</button>
-
-  <div id="results"></div>
+  <!-- === ゲーム本体 === -->
+  <div id="gameArea" class="hidden">
+    <h3>スコアボード</h3>
+    <div id="scoreBoard"></div>
+    <button id="calcRound" style="margin-top:12px">計算して次ラウンド</button>
+  </div>
 
   <script>
-    function generateInputs() {
-      const num = parseInt(document.getElementById('numPlayers').value);
-      const container = document.getElementById('playersInput');
+    // ----- データ構造 -----
+    let players = []; // {name:'', balance:0, outcome:null}
+    let parentIndex = 0; // 親プレイヤーの配列インデックス
+
+    // 結果マッピング
+    const outcomes = [
+      {key:'hifumi', label:'ヒフミ', score:0, mult:-2},
+      {key:'0', label:'0', score:10, mult:0},
+      {key:'1', label:'1', score:20, mult:1},
+      {key:'2', label:'2', score:30, mult:1},
+      {key:'3', label:'3', score:40, mult:1},
+      {key:'4', label:'4', score:50, mult:1},
+      {key:'5', label:'5', score:60, mult:1},
+      {key:'6', label:'6', score:70, mult:1},
+      {key:'shigoro', label:'シゴロ', score:80, mult:2},
+      {key:'zorome', label:'ゾロ目', score:90, mult:3},
+      {key:'pinzoro', label:'ピンゾロ', score:100, mult:5}
+    ];
+
+    // ----- ステップ遷移 -----
+    const setupStep = document.getElementById('setupStep');
+    const nameStep  = document.getElementById('nameStep');
+    const gameArea  = document.getElementById('gameArea');
+
+    document.getElementById('toNameStep').onclick = () => {
+      const num = parseInt(document.getElementById('playerCount').value);
+      if(isNaN(num) || num < 2){ alert('2人以上を入力してください'); return; }
+      // 動的に名前入力欄を生成
+      const container = document.getElementById('nameInputs');
       container.innerHTML = '';
-      for (let i = 1; i <= num; i++) {
-        container.innerHTML += `<h4>プレイヤー${i}:</h4>
-          <input type="number" id="p${i}_die1" min="1" max="6"> 
-          <input type="number" id="p${i}_die2" min="1" max="6"> 
-          <input type="number" id="p${i}_die3" min="1" max="6"><br><br>`;
+      for(let i=0;i<num;i++){
+        container.innerHTML += `<div><input type="text" id="name${i}" placeholder="プレイヤー${i+1} 名前"></div>`;
       }
-    }
+      setupStep.classList.add('hidden');
+      nameStep.classList.remove('hidden');
+    };
 
-    function calculateAll() {
-      const rate = parseInt(document.getElementById('rate').value);
-      const num = parseInt(document.getElementById('numPlayers').value);
-      const oya = parseInt(document.getElementById('oyaIndex').value);
-      const resultsDiv = document.getElementById('results');
-      resultsDiv.innerHTML = '';
-
-      let scores = [];
-
-      for (let i = 1; i <= num; i++) {
-        let d1 = parseInt(document.getElementById(`p${i}_die1`).value);
-        let d2 = parseInt(document.getElementById(`p${i}_die2`).value);
-        let d3 = parseInt(document.getElementById(`p${i}_die3`).value);
-
-        const dice = [d1, d2, d3].sort();
-        let text = '';
-        let multiplier = 0;
-
-        if (dice.some(d => isNaN(d) || d < 1 || d > 6)) {
-          text = '⚠️ 入力不正';
-        } else if (dice[0] === dice[1] && dice[1] === dice[2]) {
-          multiplier = (dice[0] === 1) ? 5 : 3;
-          text = (dice[0] === 1) ? 'ピンゾロ！（5倍）' : 'ゾロ目（3倍）';
-        } else if (dice.includes(1) && dice.includes(2) && dice.includes(3)) {
-          multiplier = -2;
-          text = 'ヒフミ（負け、2倍支払い）';
-        } else if (dice.includes(4) && dice.includes(5) && dice.includes(6)) {
-          multiplier = 2;
-          text = 'シゴロ（勝ち、2倍）';
-        } else if (dice[0] === dice[1]) {
-          multiplier = 1;
-          text = `${dice[2]}の目（1倍）`;
-        } else if (dice[1] === dice[2]) {
-          multiplier = 1;
-          text = `${dice[0]}の目（1倍）`;
-        } else {
-          multiplier = 0;
-          text = '役なし（振り直し）';
-        }
-
-        scores.push({ player: i, multiplier: multiplier, text: text });
+    document.getElementById('startGame').onclick = () => {
+      const num = parseInt(document.getElementById('playerCount').value);
+      players = [];
+      for(let i=0;i<num;i++){
+        const n = document.getElementById(`name${i}`).value.trim() || `Player${i+1}`;
+        players.push({name:n, balance:0, outcome:null});
       }
+      parentIndex = 0; // デフォルトで最初の人が親
+      nameStep.classList.add('hidden');
+      gameArea.classList.remove('hidden');
+      renderBoard();
+    };
 
-      const oyaScore = scores[oya - 1];
-      scores.forEach(score => {
-        let result = `<h4>プレイヤー${score.player}</h4>${score.text}<br>`;
-        if (score.player !== oya) {
-          let diff = score.multiplier - oyaScore.multiplier;
-          let money = rate * Math.abs(diff);
-          if (diff > 0) {
-            result += `→ 親から ${money}円 勝ち！`;
-          } else if (diff < 0) {
-            result += `→ 親に ${money}円 支払い…`;
-          } else {
-            result += '→ 引き分け';
-          }
-        } else {
-          result += '(親)';
-        }
-        resultsDiv.innerHTML += result + '<hr>';
+    // ----- UI描画 -----
+    function renderBoard(){
+      const board = document.getElementById('scoreBoard');
+      board.innerHTML = '';
+      players.forEach((p,idx)=>{
+        const isParent = (idx===parentIndex);
+        let row = document.createElement('div');
+        row.className = 'player-row';
+
+        // 名前と親タグ
+        row.innerHTML = `<span>${p.name}</span>` + (isParent ? '<span class="parent-tag">親</span>' : '') + ` <span class="balance">${p.balance}円</span>`;
+
+        // 親切替ボタン
+        let parentBtn = document.createElement('button');
+        parentBtn.textContent = '親にする';
+        parentBtn.style.marginLeft = '6px';
+        parentBtn.onclick = ()=>{ parentIndex = idx; players.forEach(pl=>pl.outcome=null); renderBoard(); };
+        row.appendChild(parentBtn);
+
+        // Outcome buttons
+        let panel = document.createElement('div');
+        panel.id = 'outcomePanel';
+        outcomes.forEach(o=>{
+          let b = document.createElement('button');
+          b.className = 'outcome-btn';
+          b.textContent = o.label;
+          b.onclick = ()=>{ p.outcome = o; b.blur(); highlightSelection(idx,o.key); };
+          panel.appendChild(b);
+        });
+        row.appendChild(document.createElement('br'));
+        row.appendChild(panel);
+        board.appendChild(row);
       });
     }
+
+    function highlightSelection(playerIdx, key){
+      // ハイライトをリセット
+      const rows = document.querySelectorAll('#scoreBoard .player-row');
+      const buttons = rows[playerIdx].querySelectorAll('.outcome-btn');
+      buttons.forEach(btn=>{
+        if(btn.textContent === outcomes.find(o=>o.key===key).label){ btn.style.background='#4caf50'; btn.style.color='#fff'; }
+        else { btn.style.background=''; btn.style.color=''; }
+      });
+    }
+
+    // ----- ラウンド計算 -----
+    document.getElementById('calcRound').onclick = ()=>{
+      const rate = parseInt(document.getElementById('rateInput').value);
+      const parent = players[parentIndex];
+      if(parent.outcome===null){ alert('親の結果が未入力です'); return; }
+
+      players.forEach((pl,idx)=>{
+        if(pl.outcome===null){ alert(pl.name+' の結果が未入力です'); return; }
+      });
+
+      players.forEach((pl,idx)=>{
+        if(idx===parentIndex) return; // 親自身は後でまとめて
+        const child = pl;
+        const parentOutcome = parent.outcome;
+        const childOutcome  = child.outcome;
+
+        if(childOutcome.score === parentOutcome.score){
+          // 引き分け
+          return;
+        }
+        const winnerIsChild = childOutcome.score > parentOutcome.score;
+        const winnerMult = winnerIsChild ? childOutcome.mult : parentOutcome.mult;
+        const money = rate * Math.abs(winnerMult);
+        if(winnerIsChild){
+          child.balance += money;
+          parent.balance -= money;
+        } else {
+          child.balance -= money;
+          parent.balance += money;
+        }
+      });
+
+      // ラウンドリセット
+      players.forEach(pl=>{ pl.outcome=null; });
+      renderBoard();
+    };
   </script>
 </body>
 </html>
+
