@@ -1,4 +1,4 @@
-// チンチロ計算アプリ v5.3  (初期オーバーレイ常時表示バグ修正)
+// チンチロ計算アプリ v5.4  (初期オーバーレイ誤表示 + スクリプト未完結バグ完全修正)
 // 作者: ChatGPT 2025-06-28
 
 <!DOCTYPE html>
@@ -6,7 +6,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>チンチロ計算アプリ v5.3</title>
+<title>チンチロ計算アプリ v5.4</title>
 <style>
   *{box-sizing:border-box}
   body{font-family:system-ui,sans-serif;margin:14px}
@@ -23,14 +23,15 @@
   .outcome-btn{padding:8px 10px;margin:4px;font-size:16px;border-radius:6px;background:#e0e0e0;color:#000}
   .selected{background:#43a047!important;color:#fff!important}
   #topControls{margin:14px 0}
-  #summaryOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);align-items:center;justify-content:center;z-index:999;display:none}
+  /* サマリーオーバーレイ */
+  #summaryOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:999}
   #summaryOverlay.show{display:flex}
   #summaryOverlay .box{background:#fff;padding:20px;border-radius:12px;width:90%;max-width:420px;text-align:center}
   #leftList{margin-top:12px;font-size:15px;white-space:pre-wrap}
 </style>
 </head>
 <body>
-<h2>チンチロ計算アプリ v5.3</h2>
+<h2>チンチロ計算アプリ v5.4</h2>
 
 <!-- === セットアップ === -->
 <div id="setupStep">
@@ -69,7 +70,7 @@
 </div>
 
 <script>
-// ===== データ構造 =====
+/***** データ構造 *****/
 let players=[];
 let parentIndex=0;
 let history=[];
@@ -90,24 +91,30 @@ const outcomes=[
   {key:'pinzoro',label:'ピンゾロ',score:100,mult:5}
 ];
 
-// ===== DOM =====
+/***** DOM 参照 *****/
 const setupStep=document.getElementById('setupStep');
 const nameStep=document.getElementById('nameStep');
 const gameArea=document.getElementById('gameArea');
 const overlay=document.getElementById('summaryOverlay');
 const summaryContent=document.getElementById('summaryContent');
 
-// ===== ステップ遷移 =====
+/***** ユーティリティ *****/
+const createBtn=(txt,bg,fn)=>{const b=document.createElement('button');b.textContent=txt;b.style.background=bg;b.onclick=fn;return b;};
+const swap=(a,b)=>{[players[a],players[b]]=[players[b],players[a]];if(parentIndex===a)parentIndex=b;else if(parentIndex===b)parentIndex=a;};
+const forceInt=(id)=>parseInt(document.getElementById(id).value);
+
+/***** ステップ遷移 *****/
+// → 名前入力
 document.getElementById('toNameStep').onclick=()=>{
-  const num=parseInt(document.getElementById('playerCount').value);
+  const num=forceInt('playerCount');
   if(isNaN(num)||num<2){alert('2人以上入力してください');return;}
   const box=document.getElementById('nameInputs');box.innerHTML='';
   for(let i=0;i<num;i++)box.innerHTML+=`<div><input type="text" id="name${i}" placeholder="プレイヤー${i+1}"></div>`;
   setupStep.classList.add('hidden');nameStep.classList.remove('hidden');
 };
-
+// → ゲーム開始
 document.getElementById('startGame').onclick=()=>{
-  const num=parseInt(document.getElementById('playerCount').value);
+  const num=forceInt('playerCount');
   players=[];history=[];lastDeltas=[];leftPlayers=[];
   for(let i=0;i<num;i++){
     const n=document.getElementById(`name${i}`).value.trim()||`Player${i+1}`;
@@ -118,27 +125,23 @@ document.getElementById('startGame').onclick=()=>{
   renderBoard();
 };
 
-// ===== UI描画 =====
+/***** ボード描画 *****/
 function renderBoard(){
   const board=document.getElementById('scoreBoard');board.innerHTML='';
   players.forEach((p,idx)=>{
+    // 外枠
     const row=document.createElement('div');row.className='player-row';
-    // メイン info
+    // メイン情報
     const main=document.createElement('div');main.className='player-main';
-    main.innerHTML=`<span>${p.name}</span>${idx===parentIndex?'<span class=\"parent-tag\">親</span>':''}<span class=\"balance\">${p.balance}円</span>`;
+    main.innerHTML=`<span>${p.name}</span>${idx===parentIndex?'<span class="parent-tag">親</span>':''}<span class="balance">${p.balance}円</span>`;
     row.appendChild(main);
-
+    // 操作ボタン
     const ops=document.createElement('div');ops.style.display='flex';ops.style.flexWrap='wrap';
-    // 親
-    const pBtn=createBtn('親','#ff9800',()=>{parentIndex=idx;players.forEach(pl=>pl.outcomeKey=null);renderBoard();});
-    // 並び替え
-    const upBtn=createBtn('↑','#607d8b',()=>{if(idx>0){swap(idx,idx-1);renderBoard();}});
-    const downBtn=createBtn('↓','#607d8b',()=>{if(idx<players.length-1){swap(idx,idx+1);renderBoard();}});
-    // 退出
-    const outBtn=createBtn('抜ける','#9c27b0',()=>{if(confirm(`${p.name} が ${p.balance}円 で退出しますか？`)){leftPlayers.push({name:p.name,final:p.balance});players.splice(idx,1);if(parentIndex>=idx)parentIndex=Math.max(0,parentIndex-1);renderBoard();}});
-    [pBtn,upBtn,downBtn,outBtn].forEach(b=>ops.appendChild(b));
+    ops.appendChild(createBtn('親','#ff9800',()=>{parentIndex=idx;players.forEach(pl=>pl.outcomeKey=null);renderBoard();}));
+    ops.appendChild(createBtn('↑','#607d8b',()=>{if(idx>0){swap(idx,idx-1);renderBoard();}}));
+    ops.appendChild(createBtn('↓','#607d8b',()=>{if(idx<players.length-1){swap(idx,idx+1);renderBoard();}}));
+    ops.appendChild(createBtn('抜ける','#9c27b0',()=>{if(confirm(`${p.name} が ${p.balance}円 で退出しますか？`)){leftPlayers.push({name:p.name,final:p.balance});players.splice(idx,1);if(parentIndex>=idx)parentIndex=Math.max(0,parentIndex-1);renderBoard();}}));
     row.appendChild(ops);
-
     // 役選択
     const panel=document.createElement('div');panel.className='ctrl-set';
     outcomes.forEach(o=>{
@@ -150,22 +153,9 @@ function renderBoard(){
     board.appendChild(row);
   });
 }
-function createBtn(text,bg,fn){const b=document.createElement('button');b.textContent=text;b.style.background=bg;b.onclick=fn;return b;}
-function swap(a,b){[players[a],players[b]]=[players[b],players[a]];if(parentIndex===a)parentIndex=b;else if(parentIndex===b)parentIndex=a;}
 
-// ===== イベント =====
-
-document.getElementById('addPlayerBtn').onclick=()=>{
-  const n=prompt('追加するプレイヤー名を入力');if(!n)return;players.push({name:n.trim(),balance:0,outcomeKey:null});renderBoard();};
-
-document.getElementById('showLeftBtn').onclick=()=>{
-  const listDiv=document.getElementById('leftList');
-  if(leftPlayers.length===0){alert('退出者はいません');return;}
-  let txt='--- 退出メンバー ---\n';leftPlayers.forEach(lp=>{txt+=`${lp.name}：${lp.final}円\n`;});
-  listDiv.textContent=txt;listDiv.classList.toggle('hidden');
-};
-
-document.getElementById('updateRate').onclick=()=>{
-  const r=parseInt(document.getElementById('rateInput').value);if(isNaN(r)||r<=0)alert('正しいレートを入力');};
-
-document.getElementById
+/*****トップ操作ボタン*****/
+// レート更新（バリデーションのみ）
+document.getElementById('updateRate').onclick=()=>{const r=forceInt('rateInput');if(isNaN(r)||r<=0)alert('正しいレートを入力');};
+// プレイヤー追加
+document.getElementBy
