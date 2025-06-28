@@ -1,4 +1,4 @@
-// チンチロ計算アプリ v2  (スマホ対応・ボタン入力・自動計算・親タグ切替)
+// チンチロ計算アプリ v3  (スマホ操作性UP・リアルタイムレート変更・UNDO機能)
 // 作者: ChatGPT 2025-06-28
 
 <!DOCTYPE html>
@@ -6,206 +6,198 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>チンチロ計算アプリ v2</title>
+  <title>チンチロ計算アプリ v3</title>
   <style>
     * { box-sizing: border-box; }
     body {
-      font-family: sans-serif;
-      margin: 10px;
-      padding: 10px;
+      font-family: system-ui, sans-serif;
+      margin: 12px;
     }
-    h2 { margin-bottom: 10px; }
-    input, button, select {
-      font-size: 16px;
-      padding: 6px 8px;
-      margin: 4px 2px;
+    h2 { margin-bottom: 12px; }
+    input, button {
+      font-size: 18px;
+      padding: 10px 14px;
+      margin: 6px 4px;
     }
-    .hidden { display: none; }
+    button { cursor: pointer; border: none; border-radius: 6px; background:#1976d2; color:#fff; }
+    button:active { opacity: .8; }
+    .hidden { display:none; }
     .player-row {
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 6px;
-      margin-bottom: 8px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 10px;
     }
     .parent-tag {
       background: gold;
-      color: #000;
-      padding: 2px 6px;
+      color:#000;
+      padding: 2px 8px;
       border-radius: 4px;
-      font-size: 12px;
-      margin-left: 4px;
-    }
-    .balance {
-      font-weight: bold;
+      font-size: 14px;
       margin-left: 6px;
     }
+    .balance { font-weight:bold; margin-left: 8px; }
     .outcome-btn {
-      padding: 4px 6px;
-      margin: 2px;
-      font-size: 14px;
+      padding: 8px 10px;
+      margin: 4px;
+      font-size: 16px;
+      border-radius: 6px;
+      background:#e0e0e0;
+      color:#000;
     }
-    #outcomePanel {
-      margin-top: 12px;
-    }
+    .selected { background:#43a047 !important; color:#fff !important; }
+    #topControls { margin: 12px 0; }
   </style>
 </head>
 <body>
-  <h2>チンチロ計算アプリ</h2>
+  <h2>チンチロ計算アプリ v3</h2>
 
-  <!-- === セットアップステップ === -->
+  <!-- === セットアップ === -->
   <div id="setupStep">
-    <label>レート (円)：<input type="number" id="rateInput" value="1000" min="1"></label><br><br>
     <label>プレイヤー人数：<input type="number" id="playerCount" value="2" min="2"></label><br><br>
     <button id="toNameStep">次へ (名前入力)</button>
   </div>
 
-  <!-- === 名前入力ステップ === -->
+  <!-- === 名前入力 === -->
   <div id="nameStep" class="hidden">
     <h3>プレイヤーの名前を入力</h3>
     <div id="nameInputs"></div>
     <button id="startGame">ゲーム開始</button>
   </div>
 
-  <!-- === ゲーム本体 === -->
+  <!-- === ゲームエリア === -->
   <div id="gameArea" class="hidden">
-    <h3>スコアボード</h3>
+    <div id="topControls">
+      レート：<input type="number" id="rateInput" value="1000" min="1" style="width:100px;">円
+      <button id="updateRate">更新</button>
+      <button id="undoBtn" style="background:#9e9e9e;">1手戻す</button>
+    </div>
     <div id="scoreBoard"></div>
-    <button id="calcRound" style="margin-top:12px">計算して次ラウンド</button>
+    <button id="calcRound" style="margin-top:14px; width:100%;">計算して次ラウンド</button>
   </div>
 
-  <script>
-    // ----- データ構造 -----
-    let players = []; // {name:'', balance:0, outcome:null}
-    let parentIndex = 0; // 親プレイヤーの配列インデックス
+<script>
+// ===== データ =====
+let players = []; // {name,balance,outcomeKey:null}
+let parentIndex = 0;
+let history = [];
 
-    // 結果マッピング
-    const outcomes = [
-      {key:'hifumi', label:'ヒフミ', score:0, mult:-2},
-      {key:'0', label:'0', score:10, mult:0},
-      {key:'1', label:'1', score:20, mult:1},
-      {key:'2', label:'2', score:30, mult:1},
-      {key:'3', label:'3', score:40, mult:1},
-      {key:'4', label:'4', score:50, mult:1},
-      {key:'5', label:'5', score:60, mult:1},
-      {key:'6', label:'6', score:70, mult:1},
-      {key:'shigoro', label:'シゴロ', score:80, mult:2},
-      {key:'zorome', label:'ゾロ目', score:90, mult:3},
-      {key:'pinzoro', label:'ピンゾロ', score:100, mult:5}
-    ];
+const outcomes = [
+  {key:'hifumi', label:'ヒフミ', score:0, mult:-2},
+  {key:'0', label:'0', score:10, mult:0},
+  {key:'1', label:'1', score:20, mult:1},
+  {key:'2', label:'2', score:30, mult:1},
+  {key:'3', label:'3', score:40, mult:1},
+  {key:'4', label:'4', score:50, mult:1},
+  {key:'5', label:'5', score:60, mult:1},
+  {key:'6', label:'6', score:70, mult:1},
+  {key:'shigoro', label:'シゴロ', score:80, mult:2},
+  {key:'zorome', label:'ゾロ目', score:90, mult:3},
+  {key:'pinzoro', label:'ピンゾロ', score:100, mult:5},
+];
 
-    // ----- ステップ遷移 -----
-    const setupStep = document.getElementById('setupStep');
-    const nameStep  = document.getElementById('nameStep');
-    const gameArea  = document.getElementById('gameArea');
+// ===== ステップ遷移 =====
+const setupStep = document.getElementById('setupStep');
+const nameStep  = document.getElementById('nameStep');
+const gameArea  = document.getElementById('gameArea');
 
-    document.getElementById('toNameStep').onclick = () => {
-      const num = parseInt(document.getElementById('playerCount').value);
-      if(isNaN(num) || num < 2){ alert('2人以上を入力してください'); return; }
-      // 動的に名前入力欄を生成
-      const container = document.getElementById('nameInputs');
-      container.innerHTML = '';
-      for(let i=0;i<num;i++){
-        container.innerHTML += `<div><input type="text" id="name${i}" placeholder="プレイヤー${i+1} 名前"></div>`;
-      }
-      setupStep.classList.add('hidden');
-      nameStep.classList.remove('hidden');
-    };
+document.getElementById('toNameStep').onclick = ()=>{
+  const num = parseInt(document.getElementById('playerCount').value);
+  if(isNaN(num)||num<2){ alert('2人以上入力してください'); return; }
+  const container = document.getElementById('nameInputs');
+  container.innerHTML='';
+  for(let i=0;i<num;i++) container.innerHTML+=`<div><input type="text" id="name${i}" placeholder="プレイヤー${i+1}"></div>`;
+  setupStep.classList.add('hidden');
+  nameStep.classList.remove('hidden');
+};
 
-    document.getElementById('startGame').onclick = () => {
-      const num = parseInt(document.getElementById('playerCount').value);
-      players = [];
-      for(let i=0;i<num;i++){
-        const n = document.getElementById(`name${i}`).value.trim() || `Player${i+1}`;
-        players.push({name:n, balance:0, outcome:null});
-      }
-      parentIndex = 0; // デフォルトで最初の人が親
-      nameStep.classList.add('hidden');
-      gameArea.classList.remove('hidden');
-      renderBoard();
-    };
+document.getElementById('startGame').onclick = ()=>{
+  const num = parseInt(document.getElementById('playerCount').value);
+  players=[];
+  for(let i=0;i<num;i++){
+    const name=document.getElementById(`name${i}`).value.trim()||`Player${i+1}`;
+    players.push({name,balance:0,outcomeKey:null});
+  }
+  parentIndex=0; history=[];
+  nameStep.classList.add('hidden');
+  gameArea.classList.remove('hidden');
+  renderBoard();
+};
 
-    // ----- UI描画 -----
-    function renderBoard(){
-      const board = document.getElementById('scoreBoard');
-      board.innerHTML = '';
-      players.forEach((p,idx)=>{
-        const isParent = (idx===parentIndex);
-        let row = document.createElement('div');
-        row.className = 'player-row';
+// ===== UI描画 =====
+function renderBoard(){
+  const board=document.getElementById('scoreBoard');
+  board.innerHTML='';
+  players.forEach((p,idx)=>{
+    const row=document.createElement('div');
+    row.className='player-row';
 
-        // 名前と親タグ
-        row.innerHTML = `<span>${p.name}</span>` + (isParent ? '<span class="parent-tag">親</span>' : '') + ` <span class="balance">${p.balance}円</span>`;
+    // 上段 (名前・親タグ・残高・親切替)
+    row.innerHTML=`<span>${p.name}</span>${idx===parentIndex?'<span class="parent-tag">親</span>':''}<span class="balance">${p.balance}円</span>`;
+    const parentBtn=document.createElement('button');
+    parentBtn.textContent='親にする';
+    parentBtn.style.background='#ff9800';
+    parentBtn.onclick=()=>{ parentIndex=idx; players.forEach(pl=>pl.outcomeKey=null); renderBoard(); };
+    row.appendChild(parentBtn);
 
-        // 親切替ボタン
-        let parentBtn = document.createElement('button');
-        parentBtn.textContent = '親にする';
-        parentBtn.style.marginLeft = '6px';
-        parentBtn.onclick = ()=>{ parentIndex = idx; players.forEach(pl=>pl.outcome=null); renderBoard(); };
-        row.appendChild(parentBtn);
+    // ボタンパネル
+    const panel=document.createElement('div');
+    outcomes.forEach(o=>{
+      const b=document.createElement('button');
+      b.className='outcome-btn';
+      b.textContent=o.label;
+      if(p.outcomeKey===o.key) b.classList.add('selected');
+      b.onclick=()=>{ p.outcomeKey=o.key; renderBoard(); };
+      panel.appendChild(b);
+    });
+    row.appendChild(document.createElement('br'));
+    row.appendChild(panel);
+    board.appendChild(row);
+  });
+}
 
-        // Outcome buttons
-        let panel = document.createElement('div');
-        panel.id = 'outcomePanel';
-        outcomes.forEach(o=>{
-          let b = document.createElement('button');
-          b.className = 'outcome-btn';
-          b.textContent = o.label;
-          b.onclick = ()=>{ p.outcome = o; b.blur(); highlightSelection(idx,o.key); };
-          panel.appendChild(b);
-        });
-        row.appendChild(document.createElement('br'));
-        row.appendChild(panel);
-        board.appendChild(row);
-      });
-    }
+// ===== レート変更 =====
+document.getElementById('updateRate').onclick=()=>{
+  const rate=parseInt(document.getElementById('rateInput').value);
+  if(isNaN(rate)||rate<=0) alert('正しいレートを入力してください');
+};
 
-    function highlightSelection(playerIdx, key){
-      // ハイライトをリセット
-      const rows = document.querySelectorAll('#scoreBoard .player-row');
-      const buttons = rows[playerIdx].querySelectorAll('.outcome-btn');
-      buttons.forEach(btn=>{
-        if(btn.textContent === outcomes.find(o=>o.key===key).label){ btn.style.background='#4caf50'; btn.style.color='#fff'; }
-        else { btn.style.background=''; btn.style.color=''; }
-      });
-    }
+// ===== UNDO =====
+document.getElementById('undoBtn').onclick=()=>{
+  if(history.length===0){ alert('戻る履歴がありません'); return; }
+  const last=history.pop();
+  ({players,parentIndex}=JSON.parse(JSON.stringify(last.state)));
+  document.getElementById('rateInput').value=last.rate;
+  renderBoard();
+};
 
-    // ----- ラウンド計算 -----
-    document.getElementById('calcRound').onclick = ()=>{
-      const rate = parseInt(document.getElementById('rateInput').value);
-      const parent = players[parentIndex];
-      if(parent.outcome===null){ alert('親の結果が未入力です'); return; }
+// ===== ラウンド計算 =====
+document.getElementById('calcRound').onclick=()=>{
+  const rate=parseInt(document.getElementById('rateInput').value);
+  if(isNaN(rate)||rate<=0){ alert('レートが未設定です'); return; }
+  const parent=players[parentIndex];
+  if(parent.outcomeKey===null){ alert('親の結果が未入力'); return; }
+  if(players.some(pl=>pl.outcomeKey===null)){ alert('未入力のプレイヤーがあります'); return; }
 
-      players.forEach((pl,idx)=>{
-        if(pl.outcome===null){ alert(pl.name+' の結果が未入力です'); return; }
-      });
+  // Push history (deep copy)
+  history.push({ state: JSON.parse(JSON.stringify({players,parentIndex})), rate });
 
-      players.forEach((pl,idx)=>{
-        if(idx===parentIndex) return; // 親自身は後でまとめて
-        const child = pl;
-        const parentOutcome = parent.outcome;
-        const childOutcome  = child.outcome;
+  const parentOutcome = outcomes.find(o=>o.key===parent.outcomeKey);
+  players.forEach((pl,idx)=>{
+    if(idx===parentIndex) return;
+    const childOutcome=outcomes.find(o=>o.key===pl.outcomeKey);
+    if(childOutcome.score===parentOutcome.score) return; // 引き分け
+    const childWins = childOutcome.score>parentOutcome.score;
+    const mult = childWins?Math.abs(childOutcome.mult):Math.abs(parentOutcome.mult);
+    const money = rate*mult;
+    if(childWins){ pl.balance+=money; parent.balance-=money; }
+    else { pl.balance-=money; parent.balance+=money; }
+  });
 
-        if(childOutcome.score === parentOutcome.score){
-          // 引き分け
-          return;
-        }
-        const winnerIsChild = childOutcome.score > parentOutcome.score;
-        const winnerMult = winnerIsChild ? childOutcome.mult : parentOutcome.mult;
-        const money = rate * Math.abs(winnerMult);
-        if(winnerIsChild){
-          child.balance += money;
-          parent.balance -= money;
-        } else {
-          child.balance -= money;
-          parent.balance += money;
-        }
-      });
-
-      // ラウンドリセット
-      players.forEach(pl=>{ pl.outcome=null; });
-      renderBoard();
-    };
-  </script>
+  // クリアアウトカム
+  players.forEach(pl=>pl.outcomeKey=null);
+  renderBoard();
+};
+</script>
 </body>
 </html>
-
