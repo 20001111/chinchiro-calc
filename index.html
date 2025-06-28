@@ -1,12 +1,9 @@
-// チンチロ計算アプリ v5.4  (初期オーバーレイ誤表示 + スクリプト未完結バグ完全修正)
-// 作者: ChatGPT 2025-06-28
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>チンチロ計算アプリ v5.4</title>
+<title>チンチロ計算アプリ v5.5</title>
 <style>
   *{box-sizing:border-box}
   body{font-family:system-ui,sans-serif;margin:14px}
@@ -18,6 +15,7 @@
   .player-row{border:2px solid #ddd;border-radius:10px;padding:10px;margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center}
   .player-main{flex:1}
   .parent-tag{background:gold;color:#000;padding:2px 8px;border-radius:4px;font-size:14px;margin-left:6px}
+  .parent-highlight{background:#ff9800!important;color:#fff!important;box-shadow:0 0 10px rgba(255,152,0,0.8);transform:scale(1.05);font-weight:bold;border:2px solid #f57c00!important}
   .balance{font-weight:bold;margin-left:8px}
   .ctrl-set{display:flex;flex-wrap:wrap;margin-top:6px}
   .outcome-btn{padding:8px 10px;margin:4px;font-size:16px;border-radius:6px;background:#e0e0e0;color:#000}
@@ -31,7 +29,7 @@
 </style>
 </head>
 <body>
-<h2>チンチロ計算アプリ v5.4</h2>
+<h2>チンチロ計算アプリ v5.5</h2>
 
 <!-- === セットアップ === -->
 <div id="setupStep">
@@ -50,14 +48,67 @@
 <div id="gameArea" class="hidden">
   <div id="topControls">
     レート：<input type="number" id="rateInput" value="1000" min="1" style="width:120px;">円
-    <button id="updateRate">更新</button>
     <button id="undoBtn" style="background:#9e9e9e">1手戻す</button>
     <button id="addPlayerBtn" style="background:#4caf50">＋追加</button>
     <button id="showLeftBtn" style="background:#795548">退出者</button>
+    <button id="historyBtn" style="background:#3f51b5">履歴</button>
+    <button id="adjustBtn" style="background:#ff5722">金額調整</button>
   </div>
   <div id="scoreBoard"></div>
   <button id="calcRound" style="margin-top:16px;width:100%">計算して結果を見る</button>
   <div id="leftList" class="hidden"></div>
+</div>
+
+<!-- === 退出者選択モーダル === -->
+<div id="exitPlayerModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:1000">
+  <div style="background:#fff;padding:20px;border-radius:12px;width:90%;max-width:450px;text-align:center">
+    <h3>退出するプレイヤーを選択</h3>
+    <div id="exitPlayerList" style="margin:20px 0;text-align:left;max-height:300px;overflow-y:auto"></div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button id="cancelExitPlayer" style="background:#757575;padding:12px 24px">キャンセル</button>
+      <button id="confirmExitPlayer" style="background:#f44336;padding:12px 24px" disabled>退出させる</button>
+    </div>
+  </div>
+</div>
+
+<!-- === 履歴表示モーダル === -->
+<div id="historyModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:1000">
+  <div style="background:#fff;padding:20px;border-radius:12px;width:90%;max-width:600px;max-height:80vh;overflow-y:auto">
+    <h3>履歴</h3>
+    <div id="historyContent" style="margin:20px 0;text-align:left;white-space:pre-wrap;font-family:monospace;font-size:14px;max-height:400px;overflow-y:auto;border:1px solid #ddd;padding:10px;border-radius:6px"></div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button id="clearHistory" style="background:#f44336;padding:12px 24px">履歴をクリア</button>
+      <button id="closeHistory" style="background:#757575;padding:12px 24px">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- === 金額調整モーダル === -->
+<div id="adjustModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:1000">
+  <div style="background:#fff;padding:20px;border-radius:12px;width:90%;max-width:500px;max-height:80vh;overflow-y:auto">
+    <h3>金額調整</h3>
+    <div id="adjustContent" style="margin:20px 0"></div>
+    <div style="margin:20px 0;padding:10px;background:#f5f5f5;border-radius:6px">
+      <div id="totalCheck" style="font-weight:bold;font-size:16px"></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button id="cancelAdjust" style="background:#757575;padding:12px 24px">キャンセル</button>
+      <button id="confirmAdjust" style="background:#ff5722;padding:12px 24px">確定</button>
+    </div>
+  </div>
+</div>
+<div id="addPlayerModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:1000">
+  <div style="background:#fff;padding:20px;border-radius:12px;width:90%;max-width:400px;text-align:center">
+    <h3>新しいプレイヤーを追加</h3>
+    <div style="margin:20px 0">
+      <label style="display:block;margin-bottom:10px;font-weight:bold">名前を入力してください</label>
+      <input type="text" id="newPlayerName" placeholder="プレイヤー名" style="width:100%;padding:12px;border:2px solid #ddd;border-radius:6px;font-size:16px">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button id="cancelAddPlayer" style="background:#757575;padding:12px 24px">キャンセル</button>
+      <button id="confirmAddPlayer" style="background:#4caf50;padding:12px 24px">追加</button>
+    </div>
+  </div>
 </div>
 
 <!-- === ラウンド結果サマリー === -->
@@ -71,13 +122,14 @@
 
 <script>
 /***** データ構造 *****/
-let players=[];
-let parentIndex=0;
-let history=[];
-let lastDeltas=[];
-let leftPlayers=[];
+let players = [];
+let parentIndex = 0;
+let history = [];
+let lastDeltas = [];
+let leftPlayers = [];
+let gameHistory = []; // 履歴を保存する配列
 
-const outcomes=[
+const outcomes = [
   {key:'hifumi', label:'ヒフミ', score:0,  mult:-2},
   {key:'0',      label:'0',    score:10, mult:0},
   {key:'1',      label:'1',    score:20, mult:1},
@@ -87,66 +139,264 @@ const outcomes=[
   {key:'5',      label:'5',    score:60, mult:1},
   {key:'6',      label:'6',    score:70, mult:1},
   {key:'shigoro',label:'シゴロ',score:80, mult:2},
-  {key:'zorome', label:'ゾロ目',score:90, mult:3},
+  {key:'arashi', label:'アラシ',score:90, mult:3},
   {key:'pinzoro',label:'ピンゾロ',score:100,mult:5}
 ];
 
 /***** DOM 参照 *****/
-const setupStep=document.getElementById('setupStep');
-const nameStep=document.getElementById('nameStep');
-const gameArea=document.getElementById('gameArea');
-const overlay=document.getElementById('summaryOverlay');
-const summaryContent=document.getElementById('summaryContent');
+const setupStep = document.getElementById('setupStep');
+const nameStep = document.getElementById('nameStep');
+const gameArea = document.getElementById('gameArea');
+const overlay = document.getElementById('summaryOverlay');
+const summaryContent = document.getElementById('summaryContent');
+const addPlayerModal = document.getElementById('addPlayerModal');
+const exitPlayerModal = document.getElementById('exitPlayerModal');
+const historyModal = document.getElementById('historyModal');
+const adjustModal = document.getElementById('adjustModal');
+let selectedExitPlayerIndex = -1;
 
 /***** ユーティリティ *****/
-const createBtn=(txt,bg,fn)=>{const b=document.createElement('button');b.textContent=txt;b.style.background=bg;b.onclick=fn;return b;};
-const swap=(a,b)=>{[players[a],players[b]]=[players[b],players[a]];if(parentIndex===a)parentIndex=b;else if(parentIndex===b)parentIndex=a;};
-const forceInt=(id)=>parseInt(document.getElementById(id).value);
+const createBtn = (txt, bg, fn) => {
+  const b = document.createElement('button');
+  b.textContent = txt;
+  b.style.background = bg;
+  b.onclick = fn;
+  return b;
+};
 
-/***** ステップ遷移 *****/
-// → 名前入力
-document.getElementById('toNameStep').onclick=()=>{
-  const num=forceInt('playerCount');
-  if(isNaN(num)||num<2){alert('2人以上入力してください');return;}
-  const box=document.getElementById('nameInputs');box.innerHTML='';
-  for(let i=0;i<num;i++)box.innerHTML+=`<div><input type="text" id="name${i}" placeholder="プレイヤー${i+1}"></div>`;
-  setupStep.classList.add('hidden');nameStep.classList.remove('hidden');
+const swap = (a, b) => {
+  [players[a], players[b]] = [players[b], players[a]];
+  if (parentIndex === a) parentIndex = b;
+  else if (parentIndex === b) parentIndex = a;
 };
-// → ゲーム開始
-document.getElementById('startGame').onclick=()=>{
-  const num=forceInt('playerCount');
-  players=[];history=[];lastDeltas=[];leftPlayers=[];
-  for(let i=0;i<num;i++){
-    const n=document.getElementById(`name${i}`).value.trim()||`Player${i+1}`;
-    players.push({name:n,balance:0,outcomeKey:null});
+
+const forceInt = (id) => parseInt(document.getElementById(id).value);
+
+// 履歴に追加する関数
+function addToHistory(summary) {
+  const timestamp = new Date().toLocaleString('ja-JP');
+  const currentBalances = players.map(p => `${p.name}: ${p.balance}円`).join(', ');
+  const leftBalances = leftPlayers.map(p => `${p.name}: ${p.final}円`).join(', ');
+  
+  const historyEntry = `【${timestamp}】\n${summary}\n\n現在の残高:\n${currentBalances}${leftPlayers.length > 0 ? '\n退出者: ' + leftBalances : ''}\n\n${'='.repeat(50)}\n`;
+  
+  gameHistory.push(historyEntry);
+}
+
+// 履歴表示
+function showHistory() {
+  const content = document.getElementById('historyContent');
+  if (gameHistory.length === 0) {
+    content.textContent = '履歴がありません';
+  } else {
+    content.textContent = gameHistory.join('\n');
   }
-  parentIndex=0;
-  nameStep.classList.add('hidden');gameArea.classList.remove('hidden');
-  renderBoard();
-};
+  historyModal.style.display = 'flex';
+}
+
+// 金額調整表示
+function showAdjustModal() {
+  const content = document.getElementById('adjustContent');
+  content.innerHTML = '';
+  
+  // 現在のプレイヤー
+  players.forEach((p, idx) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'margin:10px 0;padding:10px;border:1px solid #ddd;border-radius:6px;display:flex;align-items:center;justify-content:space-between';
+    div.innerHTML = `
+      <span style="font-weight:bold">${p.name}</span>
+      <input type="number" id="adjust_${idx}" value="${p.balance}" style="width:120px;padding:5px;border:1px solid #ccc;border-radius:4px">
+    `;
+    content.appendChild(div);
+  });
+  
+  // 退出者
+  if (leftPlayers.length > 0) {
+    const separator = document.createElement('div');
+    separator.style.cssText = 'margin:20px 0 10px 0;padding:10px 0;border-top:2px solid #ddd;font-weight:bold;color:#666';
+    separator.textContent = '退出者';
+    content.appendChild(separator);
+    
+    leftPlayers.forEach((p, idx) => {
+      const div = document.createElement('div');
+      div.style.cssText = 'margin:10px 0;padding:10px;border:1px solid #ddd;border-radius:6px;display:flex;align-items:center;justify-content:space-between;background:#f9f9f9';
+      div.innerHTML = `
+        <span style="font-weight:bold;color:#666">${p.name}</span>
+        <input type="number" id="adjust_left_${idx}" value="${p.final}" style="width:120px;padding:5px;border:1px solid #ccc;border-radius:4px">
+      `;
+      content.appendChild(div);
+    });
+  }
+  
+  updateTotalCheck();
+  adjustModal.style.display = 'flex';
+  
+  // 入力フィールドにイベントリスナーを追加
+  content.querySelectorAll('input').forEach(input => {
+    input.addEventListener('input', updateTotalCheck);
+  });
+}
+
+// 合計チェック
+function updateTotalCheck() {
+  const checkDiv = document.getElementById('totalCheck');
+  let total = 0;
+  
+  // 現在のプレイヤーの合計
+  players.forEach((p, idx) => {
+    const input = document.getElementById(`adjust_${idx}`);
+    if (input) {
+      total += parseInt(input.value) || 0;
+    }
+  });
+  
+  // 退出者の合計
+  leftPlayers.forEach((p, idx) => {
+    const input = document.getElementById(`adjust_left_${idx}`);
+    if (input) {
+      total += parseInt(input.value) || 0;
+    }
+  });
+  
+  if (total === 0) {
+    checkDiv.innerHTML = '<span style="color:#4caf50">✓ 合計: 0円（正常）</span>';
+    document.getElementById('confirmAdjust').disabled = false;
+  } else if (total > 0) {
+    checkDiv.innerHTML = `<span style="color:#f44336">⚠ 合計: +${total}円（${total}円多い）</span>`;
+    document.getElementById('confirmAdjust').disabled = true;
+  } else {
+    checkDiv.innerHTML = `<span style="color:#f44336">⚠ 合計: ${total}円（${Math.abs(total)}円足りない）</span>`;
+    document.getElementById('confirmAdjust').disabled = true;
+  }
+}
+function calculateBattle(parentOutcome, childOutcome, rate) {
+  const parent = outcomes.find(o => o.key === parentOutcome);
+  const child = outcomes.find(o => o.key === childOutcome);
+  
+  // 同じ役の場合は親が勝ち
+  if (parent.key === child.key) {
+    return {
+      winner: 'parent',
+      amount: rate * parent.mult,
+      reason: `${parent.label} vs ${child.label} → 同じ役のため親勝ち`
+    };
+  }
+  
+  // ヒフミが絡む場合の特別処理
+  if (parent.key === 'hifumi' || child.key === 'hifumi') {
+    if (parent.key === 'hifumi' && child.key === 'hifumi') {
+      // 両方ヒフミの場合は親勝ち
+      return {
+        winner: 'parent',
+        amount: rate * 2,
+        reason: `${parent.label} vs ${child.label} → 両方ヒフミのため親勝ち`
+      };
+    } else if (parent.key === 'hifumi') {
+      // 親がヒフミ、子が他の役
+      const mult = child.mult * 2; // ヒフミを踏み台にしてパワーアップ
+      return {
+        winner: 'child',
+        amount: rate * mult,
+        reason: `${parent.label} vs ${child.label} → ヒフミ倍付け適用で${mult}倍`
+      };
+    } else {
+      // 子がヒフミ、親が他の役
+      const mult = parent.mult * 2; // ヒフミを踏み台にしてパワーアップ
+      return {
+        winner: 'parent',
+        amount: rate * mult,
+        reason: `${parent.label} vs ${child.label} → ヒフミ倍付け適用で${mult}倍`
+      };
+    }
+  }
+  
+  // 通常の役対役の判定
+  // 強い役が勝ち、その役の倍率で固定
+  if (parent.score > child.score) {
+    return {
+      winner: 'parent',
+      amount: rate * parent.mult,
+      reason: `${parent.label} vs ${child.label} → 親勝ち（${parent.mult}倍固定）`
+    };
+  } else {
+    return {
+      winner: 'child',
+      amount: rate * child.mult,
+      reason: `${parent.label} vs ${child.label} → 子勝ち（${child.mult}倍固定）`
+    };
+  }
+}
 
 /***** ボード描画 *****/
-function renderBoard(){
-  const board=document.getElementById('scoreBoard');board.innerHTML='';
-  players.forEach((p,idx)=>{
+function renderBoard() {
+  const board = document.getElementById('scoreBoard');
+  board.innerHTML = '';
+  
+  players.forEach((p, idx) => {
     // 外枠
-    const row=document.createElement('div');row.className='player-row';
+    const row = document.createElement('div');
+    row.className = 'player-row';
+    if (idx === parentIndex) {
+      row.classList.add('parent-highlight');
+    }
+    
     // メイン情報
-    const main=document.createElement('div');main.className='player-main';
-    main.innerHTML=`<span>${p.name}</span>${idx===parentIndex?'<span class="parent-tag">親</span>':''}<span class="balance">${p.balance}円</span>`;
+    const main = document.createElement('div');
+    main.className = 'player-main';
+    main.innerHTML = `<span>${p.name}</span>${idx === parentIndex ? '<span class="parent-tag">親</span>' : ''}<span class="balance">${p.balance}円</span>`;
     row.appendChild(main);
+    
     // 操作ボタン
-    const ops=document.createElement('div');ops.style.display='flex';ops.style.flexWrap='wrap';
-    ops.appendChild(createBtn('親','#ff9800',()=>{parentIndex=idx;players.forEach(pl=>pl.outcomeKey=null);renderBoard();}));
-    ops.appendChild(createBtn('↑','#607d8b',()=>{if(idx>0){swap(idx,idx-1);renderBoard();}}));
-    ops.appendChild(createBtn('↓','#607d8b',()=>{if(idx<players.length-1){swap(idx,idx+1);renderBoard();}}));
-    ops.appendChild(createBtn('抜ける','#9c27b0',()=>{if(confirm(`${p.name} が ${p.balance}円 で退出しますか？`)){leftPlayers.push({name:p.name,final:p.balance});players.splice(idx,1);if(parentIndex>=idx)parentIndex=Math.max(0,parentIndex-1);renderBoard();}}));
+    const ops = document.createElement('div');
+    ops.style.display = 'flex';
+    ops.style.flexWrap = 'wrap';
+    ops.style.alignItems = 'center';
+    ops.style.gap = '4px';
+    
+    // 親ボタン（大きく目立つ）
+    const parentBtn = createBtn('親', '#ff9800', () => {
+      parentIndex = idx;
+      players.forEach(pl => pl.outcomeKey = null);
+      renderBoard();
+    });
+    parentBtn.style.fontSize = '16px';
+    parentBtn.style.padding = '12px 20px';
+    parentBtn.style.fontWeight = 'bold';
+    ops.appendChild(parentBtn);
+    
+    // 順序変更ボタン（小さく）
+    const upBtn = createBtn('↑', '#607d8b', () => {
+      if (idx > 0) {
+        swap(idx, idx - 1);
+        renderBoard();
+      }
+    });
+    upBtn.style.fontSize = '12px';
+    upBtn.style.padding = '6px 8px';
+    upBtn.style.opacity = '0.7';
+    ops.appendChild(upBtn);
+    
+    const downBtn = createBtn('↓', '#607d8b', () => {
+      if (idx < players.length - 1) {
+        swap(idx, idx + 1);
+        renderBoard();
+      }
+    });
+    downBtn.style.fontSize = '12px';
+    downBtn.style.padding = '6px 8px';
+    downBtn.style.opacity = '0.7';
+    ops.appendChild(downBtn);
     row.appendChild(ops);
+    
     // 役選択
-    const panel=document.createElement('div');panel.className='ctrl-set';
-    outcomes.forEach(o=>{
-      const b=createBtn(o.label,'#e0e0e0',()=>{p.outcomeKey=o.key;renderBoard();});
-      if(p.outcomeKey===o.key)b.classList.add('selected');
+    const panel = document.createElement('div');
+    panel.className = 'ctrl-set';
+    outcomes.forEach(o => {
+      const b = createBtn(o.label, '#e0e0e0', () => {
+        p.outcomeKey = o.key;
+        renderBoard();
+      });
+      if (p.outcomeKey === o.key) b.classList.add('selected');
       panel.appendChild(b);
     });
     row.appendChild(panel);
@@ -154,8 +404,373 @@ function renderBoard(){
   });
 }
 
-/*****トップ操作ボタン*****/
-// レート更新（バリデーションのみ）
-document.getElementById('updateRate').onclick=()=>{const r=forceInt('rateInput');if(isNaN(r)||r<=0)alert('正しいレートを入力');};
+// 退出者表示を更新する関数
+function updateLeftDisplay() {
+  const leftList = document.getElementById('leftList');
+  if (leftPlayers.length === 0) {
+    leftList.classList.add('hidden');
+    return;
+  }
+  
+  let text = '退出者一覧:\n';
+  leftPlayers.forEach(p => {
+    text += `${p.name}: ${p.final}円\n`;
+  });
+  
+  leftList.textContent = text;
+  leftList.classList.remove('hidden');
+}
+
+// プレイヤー追加モーダル表示
+function showAddPlayerModal() {
+  document.getElementById('newPlayerName').value = '';
+  addPlayerModal.style.display = 'flex';
+  // フォーカスを入力欄に設定
+  setTimeout(() => {
+    document.getElementById('newPlayerName').focus();
+  }, 100);
+}
+
+// 退出者選択モーダル表示
+function showExitPlayerModal() {
+  const listDiv = document.getElementById('exitPlayerList');
+  listDiv.innerHTML = '';
+  selectedExitPlayerIndex = -1;
+  document.getElementById('confirmExitPlayer').disabled = true;
+  
+  players.forEach((p, idx) => {
+    const playerDiv = document.createElement('div');
+    playerDiv.style.cssText = 'border:2px solid #ddd;border-radius:8px;padding:12px;margin:8px 0;cursor:pointer;transition:all 0.2s';
+    playerDiv.innerHTML = `<strong>${p.name}</strong> <span style="color:#666">(${p.balance}円)</span>`;
+    
+    playerDiv.onclick = () => {
+      // 前の選択を解除
+      document.querySelectorAll('#exitPlayerList > div').forEach(div => {
+        div.style.background = '#fff';
+        div.style.borderColor = '#ddd';
+        div.style.color = '#000';
+      });
+      
+      // 新しい選択を設定
+      playerDiv.style.background = '#f44336';
+      playerDiv.style.borderColor = '#d32f2f';
+      playerDiv.style.color = '#fff';
+      selectedExitPlayerIndex = idx;
+      document.getElementById('confirmExitPlayer').disabled = false;
+    };
+    
+    listDiv.appendChild(playerDiv);
+  });
+  
+  exitPlayerModal.style.display = 'flex';
+}
+
+/***** ステップ遷移 *****/
+// → 名前入力
+document.getElementById('toNameStep').onclick = () => {
+  const num = forceInt('playerCount');
+  if (isNaN(num) || num < 2) {
+    alert('2人以上入力してください');
+    return;
+  }
+  const box = document.getElementById('nameInputs');
+  box.innerHTML = '';
+  for (let i = 0; i < num; i++) {
+    box.innerHTML += `<div><input type="text" id="name${i}" placeholder="プレイヤー${i+1}"></div>`;
+  }
+  setupStep.classList.add('hidden');
+  nameStep.classList.remove('hidden');
+};
+
+// → ゲーム開始
+document.getElementById('startGame').onclick = () => {
+  const num = forceInt('playerCount');
+  players = [];
+  history = [];
+  lastDeltas = [];
+  leftPlayers = [];
+  gameHistory = []; // 履歴もリセット
+  
+  for (let i = 0; i < num; i++) {
+    const n = document.getElementById(`name${i}`).value.trim() || `Player${i+1}`;
+    players.push({name: n, balance: 0, outcomeKey: null});
+  }
+  
+  parentIndex = 0;
+  nameStep.classList.add('hidden');
+  gameArea.classList.remove('hidden');
+  
+  renderBoard();
+  updateLeftDisplay();
+};
+
 // プレイヤー追加
-document.getElementBy
+document.getElementById('addPlayerBtn').onclick = () => {
+  showAddPlayerModal();
+};
+
+// 履歴ボタン
+document.getElementById('historyBtn').onclick = () => {
+  showHistory();
+};
+
+// 金額調整ボタン
+document.getElementById('adjustBtn').onclick = () => {
+  showAdjustModal();
+};
+
+// 退出者ボタン - プレイヤー選択式
+document.getElementById('showLeftBtn').onclick = () => {
+  if (players.length === 0) {
+    alert('プレイヤーがいません');
+    return;
+  }
+  showExitPlayerModal();
+};
+
+// 1手戻す
+document.getElementById('undoBtn').onclick = () => {
+  if (history.length === 0) {
+    alert('戻す履歴がありません');
+    return;
+  }
+  
+  const lastState = history.pop();
+  players = lastState.players;
+  parentIndex = lastState.parentIndex;
+  renderBoard();
+  updateLeftDisplay();
+  alert('1手戻しました');
+};
+
+// 計算して結果を見る
+document.getElementById('calcRound').onclick = () => {
+  // 履歴保存
+  history.push({
+    players: JSON.parse(JSON.stringify(players)),
+    parentIndex: parentIndex
+  });
+  
+  const rate = forceInt('rateInput');
+  if (isNaN(rate) || rate <= 0) {
+    alert('正しいレートを入力してください');
+    return;
+  }
+  
+  // 全員が役を選んでいるかチェック
+  const unselected = players.filter(p => !p.outcomeKey);
+  if (unselected.length > 0) {
+    alert(`${unselected.map(p => p.name).join(', ')} の役が選択されていません`);
+    return;
+  }
+  
+  // 計算処理
+  const parent = players[parentIndex];
+  const parentOutcome = outcomes.find(o => o.key === parent.outcomeKey);
+  
+  let summary = `親: ${parent.name} (${parentOutcome.label})\n\n`;
+  
+  players.forEach((p, idx) => {
+    if (idx === parentIndex) return;
+    
+    const battleResult = calculateBattle(parent.outcomeKey, p.outcomeKey, rate);
+    
+    if (battleResult.winner === 'parent') {
+      p.balance -= battleResult.amount;
+      parent.balance += battleResult.amount;
+      summary += `${p.name} → -${battleResult.amount}円\n`;
+    } else {
+      p.balance += battleResult.amount;
+      parent.balance -= battleResult.amount;
+      summary += `${p.name} → +${battleResult.amount}円\n`;
+    }
+    
+    summary += `  ${battleResult.reason}\n\n`;
+  });
+  
+  summary += `親 ${parent.name} → ${parent.balance >= 0 ? '+' : ''}${parent.balance}円`;
+  
+  // 履歴に追加
+  addToHistory(summary);
+  
+  summaryContent.textContent = summary;
+  overlay.classList.add('show');
+};
+
+// 次のラウンドへ
+document.getElementById('nextRoundBtn').onclick = () => {
+  // 役選択をリセット
+  players.forEach(p => p.outcomeKey = null);
+  
+  // 親を次の人に
+  parentIndex = (parentIndex + 1) % players.length;
+  
+  overlay.classList.remove('show');
+  renderBoard();
+};
+
+// オーバーレイ外クリックで閉じる
+overlay.onclick = (e) => {
+  if (e.target === overlay) {
+    overlay.classList.remove('show');
+  }
+};
+
+// 履歴モーダルのイベント
+document.getElementById('closeHistory').onclick = () => {
+  historyModal.style.display = 'none';
+};
+
+document.getElementById('clearHistory').onclick = () => {
+  if (confirm('履歴をすべてクリアしますか？')) {
+    gameHistory = [];
+    document.getElementById('historyContent').textContent = '履歴がありません';
+  }
+};
+
+// 金額調整モーダルのイベント
+document.getElementById('cancelAdjust').onclick = () => {
+  adjustModal.style.display = 'none';
+};
+
+document.getElementById('confirmAdjust').onclick = () => {
+  // 合計チェック
+  let total = 0;
+  
+  // 現在のプレイヤーの値を更新
+  players.forEach((p, idx) => {
+    const input = document.getElementById(`adjust_${idx}`);
+    if (input) {
+      const newValue = parseInt(input.value) || 0;
+      p.balance = newValue;
+      total += newValue;
+    }
+  });
+  
+  // 退出者の値を更新
+  leftPlayers.forEach((p, idx) => {
+    const input = document.getElementById(`adjust_left_${idx}`);
+    if (input) {
+      const newValue = parseInt(input.value) || 0;
+      p.final = newValue;
+      total += newValue;
+    }
+  });
+  
+  // 最終チェック
+  if (total !== 0) {
+    if (total > 0) {
+      alert(`合計が${total}円多いです。修正してください。`);
+    } else {
+      alert(`合計が${Math.abs(total)}円足りません。修正してください。`);
+    }
+    return;
+  }
+  
+  // 履歴に記録
+  addToHistory('金額調整が行われました');
+  
+  adjustModal.style.display = 'none';
+  renderBoard();
+  updateLeftDisplay();
+  alert('金額を調整しました');
+};
+
+// モーダル外クリックで閉じる
+historyModal.onclick = (e) => {
+  if (e.target === historyModal) {
+    historyModal.style.display = 'none';
+  }
+};
+
+adjustModal.onclick = (e) => {
+  if (e.target === adjustModal) {
+    adjustModal.style.display = 'none';
+  }
+};
+
+// プレイヤー追加モーダルのイベント
+document.getElementById('cancelAddPlayer').onclick = () => {
+  addPlayerModal.style.display = 'none';
+};
+
+document.getElementById('confirmAddPlayer').onclick = () => {
+  const name = document.getElementById('newPlayerName').value.trim();
+  if (!name) {
+    alert('名前を入力してください');
+    return;
+  }
+  
+  // 退出者リストに同じ名前があるかチェック
+  const exitedPlayerIndex = leftPlayers.findIndex(p => p.name === name);
+  if (exitedPlayerIndex !== -1) {
+    // 復活処理
+    const revivedPlayer = leftPlayers[exitedPlayerIndex];
+    players.push({name: revivedPlayer.name, balance: revivedPlayer.final, outcomeKey: null});
+    leftPlayers.splice(exitedPlayerIndex, 1);
+    renderBoard();
+    updateLeftDisplay();
+    addPlayerModal.style.display = 'none';
+    alert(`${name}が復活しました！（残高: ${revivedPlayer.final}円）`);
+  } else {
+    // 新規追加
+    players.push({name: name, balance: 0, outcomeKey: null});
+    renderBoard();
+    updateLeftDisplay();
+    addPlayerModal.style.display = 'none';
+    alert(`${name}を追加しました`);
+  }
+};
+
+// Enterキーで追加
+document.getElementById('newPlayerName').onkeypress = (e) => {
+  if (e.key === 'Enter') {
+    document.getElementById('confirmAddPlayer').click();
+  }
+};
+
+// モーダル外クリックで閉じる
+addPlayerModal.onclick = (e) => {
+  if (e.target === addPlayerModal) {
+    addPlayerModal.style.display = 'none';
+  }
+};
+
+// 退出者選択モーダルのイベント
+document.getElementById('cancelExitPlayer').onclick = () => {
+  exitPlayerModal.style.display = 'none';
+};
+
+document.getElementById('confirmExitPlayer').onclick = () => {
+  if (selectedExitPlayerIndex === -1) return;
+  
+  const selectedPlayer = players[selectedExitPlayerIndex];
+  leftPlayers.push({name: selectedPlayer.name, final: selectedPlayer.balance});
+  players.splice(selectedExitPlayerIndex, 1);
+  
+  // 親インデックスの調整
+  if (parentIndex >= selectedExitPlayerIndex) {
+    parentIndex = Math.max(0, parentIndex - 1);
+  }
+  
+  renderBoard();
+  updateLeftDisplay();
+  exitPlayerModal.style.display = 'none';
+  alert(`${selectedPlayer.name}を退出させました`);
+};
+
+// 退出者モーダル外クリックで閉じる
+exitPlayerModal.onclick = (e) => {
+  if (e.target === exitPlayerModal) {
+    exitPlayerModal.style.display = 'none';
+  }
+};
+
+// 初期化
+window.onload = () => {
+  updateLeftDisplay();
+  console.log('アプリが読み込まれました');
+};
+</script>
+</body>
+</html>
