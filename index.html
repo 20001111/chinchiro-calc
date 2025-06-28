@@ -1,203 +1,231 @@
-// チンチロ計算アプリ v3  (スマホ操作性UP・リアルタイムレート変更・UNDO機能)
+// チンチロ計算アプリ v5  (メンバー追加/退出・順番変更・サマリー改良)
 // 作者: ChatGPT 2025-06-28
 
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>チンチロ計算アプリ v3</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: system-ui, sans-serif;
-      margin: 12px;
-    }
-    h2 { margin-bottom: 12px; }
-    input, button {
-      font-size: 18px;
-      padding: 10px 14px;
-      margin: 6px 4px;
-    }
-    button { cursor: pointer; border: none; border-radius: 6px; background:#1976d2; color:#fff; }
-    button:active { opacity: .8; }
-    .hidden { display:none; }
-    .player-row {
-      border: 2px solid #ddd;
-      border-radius: 10px;
-      padding: 10px;
-      margin-bottom: 10px;
-    }
-    .parent-tag {
-      background: gold;
-      color:#000;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 14px;
-      margin-left: 6px;
-    }
-    .balance { font-weight:bold; margin-left: 8px; }
-    .outcome-btn {
-      padding: 8px 10px;
-      margin: 4px;
-      font-size: 16px;
-      border-radius: 6px;
-      background:#e0e0e0;
-      color:#000;
-    }
-    .selected { background:#43a047 !important; color:#fff !important; }
-    #topControls { margin: 12px 0; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>チンチロ計算アプリ v5</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:system-ui,sans-serif;margin:14px}
+  h2{margin-bottom:14px}
+  input,button{font-size:18px;padding:10px 14px;margin:6px 4px}
+  button{cursor:pointer;border:none;border-radius:6px;background:#1976d2;color:#fff}
+  button:active{opacity:.85}
+  .hidden{display:none}
+  .player-row{border:2px solid #ddd;border-radius:10px;padding:10px;margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center}
+  .player-main{flex:1}
+  .parent-tag{background:gold;color:#000;padding:2px 8px;border-radius:4px;font-size:14px;margin-left:6px}
+  .balance{font-weight:bold;margin-left:8px}
+  .ctrl-set{display:flex;flex-wrap:wrap;margin-top:6px}
+  .outcome-btn{padding:8px 10px;margin:4px;font-size:16px;border-radius:6px;background:#e0e0e0;color:#000}
+  .selected{background:#43a047!important;color:#fff!important}
+  #topControls{margin:14px 0}
+  /* サマリーオーバーレイ */
+  #summaryOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:999}
+  #summaryOverlay .box{background:#fff;padding:20px;border-radius:12px;width:90%;max-width:420px;text-align:center}
+  #summaryOverlay h3{margin-top:0}
+  /* 退出メンバー表示 */
+  #leftList{margin-top:12px;font-size:15px;white-space:pre-wrap}
+</style>
 </head>
 <body>
-  <h2>チンチロ計算アプリ v3</h2>
+<h2>チンチロ計算アプリ v5</h2>
 
-  <!-- === セットアップ === -->
-  <div id="setupStep">
-    <label>プレイヤー人数：<input type="number" id="playerCount" value="2" min="2"></label><br><br>
-    <button id="toNameStep">次へ (名前入力)</button>
-  </div>
+<!-- === セットアップ === -->
+<div id="setupStep">
+  <label>プレイヤー人数：<input type="number" id="playerCount" value="2" min="2"></label><br><br>
+  <button id="toNameStep">次へ (名前入力)</button>
+</div>
 
-  <!-- === 名前入力 === -->
-  <div id="nameStep" class="hidden">
-    <h3>プレイヤーの名前を入力</h3>
-    <div id="nameInputs"></div>
-    <button id="startGame">ゲーム開始</button>
-  </div>
+<!-- === 名前入力 === -->
+<div id="nameStep" class="hidden">
+  <h3>プレイヤーの名前を入力</h3>
+  <div id="nameInputs"></div>
+  <button id="startGame">ゲーム開始</button>
+</div>
 
-  <!-- === ゲームエリア === -->
-  <div id="gameArea" class="hidden">
-    <div id="topControls">
-      レート：<input type="number" id="rateInput" value="1000" min="1" style="width:100px;">円
-      <button id="updateRate">更新</button>
-      <button id="undoBtn" style="background:#9e9e9e;">1手戻す</button>
-    </div>
-    <div id="scoreBoard"></div>
-    <button id="calcRound" style="margin-top:14px; width:100%;">計算して次ラウンド</button>
+<!-- === ゲームエリア === -->
+<div id="gameArea" class="hidden">
+  <div id="topControls">
+    レート：<input type="number" id="rateInput" value="1000" min="1" style="width:120px;">円
+    <button id="updateRate">更新</button>
+    <button id="undoBtn" style="background:#9e9e9e">1手戻す</button>
+    <button id="addPlayerBtn" style="background:#4caf50">＋追加</button>
+    <button id="showLeftBtn" style="background:#795548">退出者</button>
   </div>
+  <div id="scoreBoard"></div>
+  <button id="calcRound" style="margin-top:16px;width:100%">計算して結果を見る</button>
+  <div id="leftList" class="hidden"></div>
+</div>
+
+<!-- === ラウンド結果サマリー === -->
+<div id="summaryOverlay" class="hidden">
+  <div class="box">
+    <h3>ラウンド結果</h3>
+    <div id="summaryContent" style="text-align:left;white-space:pre-wrap"></div>
+    <button id="nextRoundBtn" style="margin-top:14px;width:100%;background:#43a047">次のラウンドへ</button>
+  </div>
+</div>
 
 <script>
 // ===== データ =====
-let players = []; // {name,balance,outcomeKey:null}
-let parentIndex = 0;
-let history = [];
+let players=[];           // {name,balance,outcomeKey:null}
+let parentIndex=0;        // 親の配列index
+let history=[];           // Undo用履歴
+let lastDeltas=[];        // サマリー用収支差分
+let leftPlayers=[];       // 退出メンバー {name, finalBalance}
 
-const outcomes = [
-  {key:'hifumi', label:'ヒフミ', score:0, mult:-2},
-  {key:'0', label:'0', score:10, mult:0},
-  {key:'1', label:'1', score:20, mult:1},
-  {key:'2', label:'2', score:30, mult:1},
-  {key:'3', label:'3', score:40, mult:1},
-  {key:'4', label:'4', score:50, mult:1},
-  {key:'5', label:'5', score:60, mult:1},
-  {key:'6', label:'6', score:70, mult:1},
-  {key:'shigoro', label:'シゴロ', score:80, mult:2},
-  {key:'zorome', label:'ゾロ目', score:90, mult:3},
-  {key:'pinzoro', label:'ピンゾロ', score:100, mult:5},
+const outcomes=[
+  {key:'hifumi', label:'ヒフミ', score:0,  mult:-2},
+  {key:'0',      label:'0',    score:10, mult:0},
+  {key:'1',      label:'1',    score:20, mult:1},
+  {key:'2',      label:'2',    score:30, mult:1},
+  {key:'3',      label:'3',    score:40, mult:1},
+  {key:'4',      label:'4',    score:50, mult:1},
+  {key:'5',      label:'5',    score:60, mult:1},
+  {key:'6',      label:'6',    score:70, mult:1},
+  {key:'shigoro',label:'シゴロ',score:80, mult:2},
+  {key:'zorome', label:'ゾロ目',score:90, mult:3},
+  {key:'pinzoro',label:'ピンゾロ',score:100,mult:5},
 ];
 
 // ===== ステップ遷移 =====
-const setupStep = document.getElementById('setupStep');
-const nameStep  = document.getElementById('nameStep');
-const gameArea  = document.getElementById('gameArea');
+const setupStep=document.getElementById('setupStep');
+const nameStep=document.getElementById('nameStep');
+const gameArea=document.getElementById('gameArea');
 
-document.getElementById('toNameStep').onclick = ()=>{
-  const num = parseInt(document.getElementById('playerCount').value);
-  if(isNaN(num)||num<2){ alert('2人以上入力してください'); return; }
-  const container = document.getElementById('nameInputs');
-  container.innerHTML='';
-  for(let i=0;i<num;i++) container.innerHTML+=`<div><input type="text" id="name${i}" placeholder="プレイヤー${i+1}"></div>`;
-  setupStep.classList.add('hidden');
-  nameStep.classList.remove('hidden');
+document.getElementById('toNameStep').onclick=()=>{
+  const num=parseInt(document.getElementById('playerCount').value);
+  if(isNaN(num)||num<2){alert('2人以上入力してください');return;}
+  const box=document.getElementById('nameInputs');box.innerHTML='';
+  for(let i=0;i<num;i++)box.innerHTML+=`<div><input type="text" id="name${i}" placeholder="プレイヤー${i+1}"></div>`;
+  setupStep.classList.add('hidden');nameStep.classList.remove('hidden');
 };
 
-document.getElementById('startGame').onclick = ()=>{
-  const num = parseInt(document.getElementById('playerCount').value);
+document.getElementById('startGame').onclick=()=>{
+  const num=parseInt(document.getElementById('playerCount').value);
   players=[];
   for(let i=0;i<num;i++){
-    const name=document.getElementById(`name${i}`).value.trim()||`Player${i+1}`;
-    players.push({name,balance:0,outcomeKey:null});
+    const n=document.getElementById(`name${i}`).value.trim()||`Player${i+1}`;
+    players.push({name:n,balance:0,outcomeKey:null});
   }
-  parentIndex=0; history=[];
-  nameStep.classList.add('hidden');
-  gameArea.classList.remove('hidden');
+  parentIndex=0;history=[];lastDeltas=[];leftPlayers=[];
+  nameStep.classList.add('hidden');gameArea.classList.remove('hidden');
   renderBoard();
 };
 
 // ===== UI描画 =====
 function renderBoard(){
-  const board=document.getElementById('scoreBoard');
-  board.innerHTML='';
+  const board=document.getElementById('scoreBoard');board.innerHTML='';
   players.forEach((p,idx)=>{
-    const row=document.createElement('div');
-    row.className='player-row';
+    const row=document.createElement('div');row.className='player-row';
 
-    // 上段 (名前・親タグ・残高・親切替)
-    row.innerHTML=`<span>${p.name}</span>${idx===parentIndex?'<span class="parent-tag">親</span>':''}<span class="balance">${p.balance}円</span>`;
-    const parentBtn=document.createElement('button');
-    parentBtn.textContent='親にする';
-    parentBtn.style.background='#ff9800';
-    parentBtn.onclick=()=>{ parentIndex=idx; players.forEach(pl=>pl.outcomeKey=null); renderBoard(); };
-    row.appendChild(parentBtn);
+    // メイン表示
+    const main=document.createElement('div');main.className='player-main';
+    main.innerHTML=`<span>${p.name}</span>${idx===parentIndex?'<span class="parent-tag">親</span>':''}<span class="balance">${p.balance}円</span>`;
+    row.appendChild(main);
+
+    // 上下並び制御
+    const ops=document.createElement('div');ops.style.display='flex';ops.style.flexWrap='wrap';
+
+    // 親切替
+    const parentBtn=document.createElement('button');parentBtn.textContent='親';parentBtn.style.background='#ff9800';
+    parentBtn.onclick=()=>{parentIndex=idx;players.forEach(pl=>pl.outcomeKey=null);renderBoard();};
+    ops.appendChild(parentBtn);
+
+    // 並び替え
+    const upBtn=document.createElement('button');upBtn.textContent='↑';upBtn.style.background='#607d8b';
+    upBtn.onclick=()=>{if(idx>0){[players[idx-1],players[idx]]=[players[idx],players[idx-1]];if(parentIndex===idx)parentIndex--;else if(parentIndex===idx-1)parentIndex++;renderBoard();}};
+    const downBtn=document.createElement('button');downBtn.textContent='↓';downBtn.style.background='#607d8b';
+    downBtn.onclick=()=>{if(idx<players.length-1){[players[idx],players[idx+1]]=[players[idx+1],players[idx]];if(parentIndex===idx)parentIndex++;else if(parentIndex===idx+1)parentIndex--;renderBoard();}};
+    ops.appendChild(upBtn);ops.appendChild(downBtn);
+
+    // 退出
+    const leaveBtn=document.createElement('button');leaveBtn.textContent='抜ける';leaveBtn.style.background='#9c27b0';
+    leaveBtn.onclick=()=>{if(confirm(`${p.name} が ${p.balance}円 で退出しますか？`)){leftPlayers.push({name:p.name,final:p.balance});players.splice(idx,1);if(parentIndex>=idx)parentIndex=Math.max(0,parentIndex-1);renderBoard();}};
+    ops.appendChild(leaveBtn);
+
+    row.appendChild(ops);
 
     // ボタンパネル
-    const panel=document.createElement('div');
+    const panel=document.createElement('div');panel.className='ctrl-set';
     outcomes.forEach(o=>{
-      const b=document.createElement('button');
-      b.className='outcome-btn';
-      b.textContent=o.label;
-      if(p.outcomeKey===o.key) b.classList.add('selected');
-      b.onclick=()=>{ p.outcomeKey=o.key; renderBoard(); };
+      const b=document.createElement('button');b.className='outcome-btn';b.textContent=o.label;
+      if(p.outcomeKey===o.key)b.classList.add('selected');
+      b.onclick=()=>{p.outcomeKey=o.key;renderBoard();};
       panel.appendChild(b);
     });
-    row.appendChild(document.createElement('br'));
     row.appendChild(panel);
     board.appendChild(row);
   });
 }
 
+// ===== プレイヤー追加 =====
+document.getElementById('addPlayerBtn').onclick=()=>{
+  const newName=prompt('追加するプレイヤー名を入力');
+  if(!newName)return;
+  players.push({name:newName.trim(),balance:0,outcomeKey:null});
+  renderBoard();
+};
+
+// ===== 退出者リスト =====
+const leftListDiv=document.getElementById('leftList');
+document.getElementById('showLeftBtn').onclick=()=>{
+  if(leftPlayers.length===0){alert('退出者はいません');return;}
+  let txt='--- 退出メンバー ---\n';
+  leftPlayers.forEach(lp=>{txt+=`${lp.name}：${lp.final}円\n`;});
+  leftListDiv.textContent=txt;
+  leftListDiv.classList.toggle('hidden');
+};
+
 // ===== レート変更 =====
 document.getElementById('updateRate').onclick=()=>{
-  const rate=parseInt(document.getElementById('rateInput').value);
-  if(isNaN(rate)||rate<=0) alert('正しいレートを入力してください');
+  const r=parseInt(document.getElementById('rateInput').value);
+  if(isNaN(r)||r<=0)alert('正しいレートを入力してください');
 };
 
 // ===== UNDO =====
 document.getElementById('undoBtn').onclick=()=>{
-  if(history.length===0){ alert('戻る履歴がありません'); return; }
-  const last=history.pop();
-  ({players,parentIndex}=JSON.parse(JSON.stringify(last.state)));
-  document.getElementById('rateInput').value=last.rate;
+  if(history.length===0){alert('戻る履歴がありません');return;}
+  const last=history.pop();({players,parentIndex}=JSON.parse(JSON.stringify(last.state)));
+  document.getElementById('rateInput').value=last.rate;lastDeltas=[];
   renderBoard();
 };
 
 // ===== ラウンド計算 =====
 document.getElementById('calcRound').onclick=()=>{
   const rate=parseInt(document.getElementById('rateInput').value);
-  if(isNaN(rate)||rate<=0){ alert('レートが未設定です'); return; }
+  if(isNaN(rate)||rate<=0){alert('レートが未設定です');return;}
+  if(players.length<2){alert('プレイヤーが2人未満です');return;}
   const parent=players[parentIndex];
-  if(parent.outcomeKey===null){ alert('親の結果が未入力'); return; }
-  if(players.some(pl=>pl.outcomeKey===null)){ alert('未入力のプレイヤーがあります'); return; }
+  if(parent.outcomeKey===null){alert('親の結果が未入力');return;}
+  if(players.some(pl=>pl.outcomeKey===null)){alert('未入力のプレイヤーがあります');return;}
 
-  // Push history (deep copy)
-  history.push({ state: JSON.parse(JSON.stringify({players,parentIndex})), rate });
-
-  const parentOutcome = outcomes.find(o=>o.key===parent.outcomeKey);
+  history.push({state:JSON.parse(JSON.stringify({players,parentIndex})),rate});
+  lastDeltas=players.map(()=>0);
+  const parentOutcome=outcomes.find(o=>o.key===parent.outcomeKey);
   players.forEach((pl,idx)=>{
-    if(idx===parentIndex) return;
-    const childOutcome=outcomes.find(o=>o.key===pl.outcomeKey);
-    if(childOutcome.score===parentOutcome.score) return; // 引き分け
-    const childWins = childOutcome.score>parentOutcome.score;
-    const mult = childWins?Math.abs(childOutcome.mult):Math.abs(parentOutcome.mult);
-    const money = rate*mult;
-    if(childWins){ pl.balance+=money; parent.balance-=money; }
-    else { pl.balance-=money; parent.balance+=money; }
+    if(idx===parentIndex)return;
+    const cOutcome=outcomes.find(o=>o.key===pl.outcomeKey);
+    if(cOutcome.score===parentOutcome.score)return; // 引き分け
+    const childWins=cOutcome.score>parentOutcome.score;
+    const mult=Math.abs(childWins?cOutcome.mult:parentOutcome.mult);
+    const money=rate*mult;
+    if(childWins){pl.balance+=money;parent.balance-=money;lastDeltas[idx]+=money;lastDeltas[parentIndex]-=money;}
+    else{pl.balance-=money;parent.balance+=money;lastDeltas[idx]-=money;lastDeltas[parentIndex]+=money;}
   });
-
-  // クリアアウトカム
-  players.forEach(pl=>pl.outcomeKey=null);
-  renderBoard();
+  showSummary();
 };
-</script>
-</body>
-</html>
+
+function showSummary(){
+  const overlay=document.getElementById('summaryOverlay');const content=document.getElementById('summaryContent');
+  let txt='';players.forEach((p,i)=>{const d=lastDeltas[i];const s=d>0?'+':'';txt+=`${p.name}：${s}${d}円 → 合計 ${p.balance}円\n`;});
+  content.textContent=txt;overlay.classList.remove('hidden');
+}
+
+document.getElementById('nextRoundBtn').onclick=()=>{
+  players.forEach(pl=>pl.outcomeKey=null);lastDeltas=[];
+  document.getElementById('summaryOverlay').classList.add
