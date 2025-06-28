@@ -1,4 +1,4 @@
-// チンチロ計算アプリ v5.2 (初期画面表示バグ修正)
+// チンチロ計算アプリ v5.3  (初期オーバーレイ常時表示バグ修正)
 // 作者: ChatGPT 2025-06-28
 
 <!DOCTYPE html>
@@ -6,7 +6,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>チンチロ計算アプリ v5.2</title>
+<title>チンチロ計算アプリ v5.3</title>
 <style>
   *{box-sizing:border-box}
   body{font-family:system-ui,sans-serif;margin:14px}
@@ -14,7 +14,7 @@
   input,button{font-size:18px;padding:10px 14px;margin:6px 4px}
   button{cursor:pointer;border:none;border-radius:6px;background:#1976d2;color:#fff}
   button:active{opacity:.85}
-  .hidden{display:none}
+  .hidden{display:none!important}
   .player-row{border:2px solid #ddd;border-radius:10px;padding:10px;margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center}
   .player-main{flex:1}
   .parent-tag{background:gold;color:#000;padding:2px 8px;border-radius:4px;font-size:14px;margin-left:6px}
@@ -23,14 +23,14 @@
   .outcome-btn{padding:8px 10px;margin:4px;font-size:16px;border-radius:6px;background:#e0e0e0;color:#000}
   .selected{background:#43a047!important;color:#fff!important}
   #topControls{margin:14px 0}
-  #summaryOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:999}
+  #summaryOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);align-items:center;justify-content:center;z-index:999;display:none}
+  #summaryOverlay.show{display:flex}
   #summaryOverlay .box{background:#fff;padding:20px;border-radius:12px;width:90%;max-width:420px;text-align:center}
-  #summaryOverlay h3{margin-top:0}
   #leftList{margin-top:12px;font-size:15px;white-space:pre-wrap}
 </style>
 </head>
 <body>
-<h2>チンチロ計算アプリ v5.2</h2>
+<h2>チンチロ計算アプリ v5.3</h2>
 
 <!-- === セットアップ === -->
 <div id="setupStep">
@@ -60,7 +60,7 @@
 </div>
 
 <!-- === ラウンド結果サマリー === -->
-<div id="summaryOverlay" class="hidden">
+<div id="summaryOverlay">
   <div class="box">
     <h3>ラウンド結果</h3>
     <div id="summaryContent" style="text-align:left;white-space:pre-wrap"></div>
@@ -90,11 +90,14 @@ const outcomes=[
   {key:'pinzoro',label:'ピンゾロ',score:100,mult:5}
 ];
 
-// ===== 初期ステップ遷移 =====
+// ===== DOM =====
 const setupStep=document.getElementById('setupStep');
 const nameStep=document.getElementById('nameStep');
 const gameArea=document.getElementById('gameArea');
+const overlay=document.getElementById('summaryOverlay');
+const summaryContent=document.getElementById('summaryContent');
 
+// ===== ステップ遷移 =====
 document.getElementById('toNameStep').onclick=()=>{
   const num=parseInt(document.getElementById('playerCount').value);
   if(isNaN(num)||num<2){alert('2人以上入力してください');return;}
@@ -120,37 +123,49 @@ function renderBoard(){
   const board=document.getElementById('scoreBoard');board.innerHTML='';
   players.forEach((p,idx)=>{
     const row=document.createElement('div');row.className='player-row';
-
-    // メイン情報
+    // メイン info
     const main=document.createElement('div');main.className='player-main';
-    main.innerHTML=`<span>${p.name}</span>${idx===parentIndex?'<span class="parent-tag">親</span>':''}<span class="balance">${p.balance}円</span>`;
+    main.innerHTML=`<span>${p.name}</span>${idx===parentIndex?'<span class=\"parent-tag\">親</span>':''}<span class=\"balance\">${p.balance}円</span>`;
     row.appendChild(main);
 
     const ops=document.createElement('div');ops.style.display='flex';ops.style.flexWrap='wrap';
     // 親
-    const parentBtn=document.createElement('button');parentBtn.textContent='親';parentBtn.style.background='#ff9800';
-    parentBtn.onclick=()=>{parentIndex=idx;players.forEach(pl=>pl.outcomeKey=null);renderBoard();};
-    ops.appendChild(parentBtn);
-    // 移動
-    const upBtn=document.createElement('button');upBtn.textContent='↑';upBtn.style.background='#607d8b';
-    upBtn.onclick=()=>{if(idx>0){[players[idx-1],players[idx]]=[players[idx],players[idx-1]];if(parentIndex===idx)parentIndex--;else if(parentIndex===idx-1)parentIndex++;renderBoard();}};
-    const downBtn=document.createElement('button');downBtn.textContent='↓';downBtn.style.background='#607d8b';
-    downBtn.onclick=()=>{if(idx<players.length-1){[players[idx],players[idx+1]]=[players[idx+1],players[idx]];if(parentIndex===idx)parentIndex++;else if(parentIndex===idx+1)parentIndex--;renderBoard();}};
-    ops.appendChild(upBtn);ops.appendChild(downBtn);
+    const pBtn=createBtn('親','#ff9800',()=>{parentIndex=idx;players.forEach(pl=>pl.outcomeKey=null);renderBoard();});
+    // 並び替え
+    const upBtn=createBtn('↑','#607d8b',()=>{if(idx>0){swap(idx,idx-1);renderBoard();}});
+    const downBtn=createBtn('↓','#607d8b',()=>{if(idx<players.length-1){swap(idx,idx+1);renderBoard();}});
     // 退出
-    const leaveBtn=document.createElement('button');leaveBtn.textContent='抜ける';leaveBtn.style.background='#9c27b0';
-    leaveBtn.onclick=()=>{if(confirm(`${p.name} が ${p.balance}円 で退出しますか？`)){leftPlayers.push({name:p.name,final:p.balance});players.splice(idx,1);if(parentIndex>=idx)parentIndex=Math.max(0,parentIndex-1);renderBoard();}};
-    ops.appendChild(leaveBtn);
-
+    const outBtn=createBtn('抜ける','#9c27b0',()=>{if(confirm(`${p.name} が ${p.balance}円 で退出しますか？`)){leftPlayers.push({name:p.name,final:p.balance});players.splice(idx,1);if(parentIndex>=idx)parentIndex=Math.max(0,parentIndex-1);renderBoard();}});
+    [pBtn,upBtn,downBtn,outBtn].forEach(b=>ops.appendChild(b));
     row.appendChild(ops);
 
-    // ボタンパネル
+    // 役選択
     const panel=document.createElement('div');panel.className='ctrl-set';
     outcomes.forEach(o=>{
-      const b=document.createElement('button');b.className='outcome-btn';b.textContent=o.label;
+      const b=createBtn(o.label,'#e0e0e0',()=>{p.outcomeKey=o.key;renderBoard();});
       if(p.outcomeKey===o.key)b.classList.add('selected');
-      b.onclick=()=>{p.outcomeKey=o.key;renderBoard();};
       panel.appendChild(b);
     });
     row.appendChild(panel);
-    board.append
+    board.appendChild(row);
+  });
+}
+function createBtn(text,bg,fn){const b=document.createElement('button');b.textContent=text;b.style.background=bg;b.onclick=fn;return b;}
+function swap(a,b){[players[a],players[b]]=[players[b],players[a]];if(parentIndex===a)parentIndex=b;else if(parentIndex===b)parentIndex=a;}
+
+// ===== イベント =====
+
+document.getElementById('addPlayerBtn').onclick=()=>{
+  const n=prompt('追加するプレイヤー名を入力');if(!n)return;players.push({name:n.trim(),balance:0,outcomeKey:null});renderBoard();};
+
+document.getElementById('showLeftBtn').onclick=()=>{
+  const listDiv=document.getElementById('leftList');
+  if(leftPlayers.length===0){alert('退出者はいません');return;}
+  let txt='--- 退出メンバー ---\n';leftPlayers.forEach(lp=>{txt+=`${lp.name}：${lp.final}円\n`;});
+  listDiv.textContent=txt;listDiv.classList.toggle('hidden');
+};
+
+document.getElementById('updateRate').onclick=()=>{
+  const r=parseInt(document.getElementById('rateInput').value);if(isNaN(r)||r<=0)alert('正しいレートを入力');};
+
+document.getElementById
