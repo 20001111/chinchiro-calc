@@ -47,7 +47,7 @@
 <!-- === ゲームエリア === -->
 <div id="gameArea" class="hidden">
   <div id="topControls">
-    レート：<input type="number" id="rateInput" value="1000" min="1" style="width:120px;">円
+    レート：<input type="number" id="rateInput" value="1000" min="1" style="width:120px;">ソシー
     <button id="undoBtn" style="background:#9e9e9e">1手戻す</button>
     <button id="addPlayerBtn" style="background:#4caf50">＋追加</button>
     <button id="showLeftBtn" style="background:#795548">退出者</button>
@@ -175,8 +175,8 @@ const forceInt = (id) => parseInt(document.getElementById(id).value);
 // 履歴に追加する関数
 function addToHistory(summary) {
   const timestamp = new Date().toLocaleString('ja-JP');
-  const currentBalances = players.map(p => `${p.name}: ${p.balance}円`).join(', ');
-  const leftBalances = leftPlayers.map(p => `${p.name}: ${p.final}円`).join(', ');
+  const currentBalances = players.map(p => `${p.name}: ${p.balance}ソシー`).join(', ');
+  const leftBalances = leftPlayers.map(p => `${p.name}: ${p.final}ソシー`).join(', ');
   
   const historyEntry = `【${timestamp}】\n${summary}\n\n現在の残高:\n${currentBalances}${leftPlayers.length > 0 ? '\n退出者: ' + leftBalances : ''}\n\n${'='.repeat(50)}\n`;
   
@@ -259,13 +259,13 @@ function updateTotalCheck() {
   });
   
   if (total === 0) {
-    checkDiv.innerHTML = '<span style="color:#4caf50">✓ 合計: 0円（正常）</span>';
+    checkDiv.innerHTML = '<span style="color:#4caf50">✓ 合計: 0ソシー（正常）</span>';
     document.getElementById('confirmAdjust').disabled = false;
   } else if (total > 0) {
-    checkDiv.innerHTML = `<span style="color:#f44336">⚠ 合計: +${total}円（${total}円多い）</span>`;
+    checkDiv.innerHTML = `<span style="color:#f44336">⚠ 合計: +${total}ソシー（${total}ソシー多い）</span>`;
     document.getElementById('confirmAdjust').disabled = true;
   } else {
-    checkDiv.innerHTML = `<span style="color:#f44336">⚠ 合計: ${total}円（${Math.abs(total)}円足りない）</span>`;
+    checkDiv.innerHTML = `<span style="color:#f44336">⚠ 合計: ${total}ソシー（${Math.abs(total)}ソシー足りない）</span>`;
     document.getElementById('confirmAdjust').disabled = true;
   }
 }
@@ -343,7 +343,7 @@ function renderBoard() {
     // メイン情報
     const main = document.createElement('div');
     main.className = 'player-main';
-    main.innerHTML = `<span>${p.name}</span>${idx === parentIndex ? '<span class="parent-tag">親</span>' : ''}<span class="balance">${p.balance}円</span>`;
+    main.innerHTML = `<span>${p.name}</span>${idx === parentIndex ? '<span class="parent-tag">親</span>' : ''}<span class="balance">${p.balance}ソシー</span>`;
     row.appendChild(main);
     
     // 操作ボタン
@@ -414,7 +414,7 @@ function updateLeftDisplay() {
   
   let text = '退出者一覧:\n';
   leftPlayers.forEach(p => {
-    text += `${p.name}: ${p.final}円\n`;
+    text += `${p.name}: ${p.final}ソシー\n`;
   });
   
   leftList.textContent = text;
@@ -441,7 +441,7 @@ function showExitPlayerModal() {
   players.forEach((p, idx) => {
     const playerDiv = document.createElement('div');
     playerDiv.style.cssText = 'border:2px solid #ddd;border-radius:8px;padding:12px;margin:8px 0;cursor:pointer;transition:all 0.2s';
-    playerDiv.innerHTML = `<strong>${p.name}</strong> <span style="color:#666">(${p.balance}円)</span>`;
+    playerDiv.innerHTML = `<strong>${p.name}</strong> <span style="color:#666">(${p.balance}ソシー)</span>`;
     
     playerDiv.onclick = () => {
       // 前の選択を解除
@@ -578,17 +578,17 @@ document.getElementById('calcRound').onclick = () => {
     if (battleResult.winner === 'parent') {
       p.balance -= battleResult.amount;
       parent.balance += battleResult.amount;
-      summary += `${p.name} → -${battleResult.amount}円\n`;
+      summary += `${p.name} → -${battleResult.amount}ソシー\n`;
     } else {
       p.balance += battleResult.amount;
       parent.balance -= battleResult.amount;
-      summary += `${p.name} → +${battleResult.amount}円\n`;
+      summary += `${p.name} → +${battleResult.amount}ソシー\n`;
     }
     
     summary += `  ${battleResult.reason}\n\n`;
   });
   
-  summary += `親 ${parent.name} → ${parent.balance >= 0 ? '+' : ''}${parent.balance}円`;
+  summary += `親 ${parent.name} → ${parent.balance >= 0 ? '+' : ''}${parent.balance}ソシー`;
   
   // 履歴に追加
   addToHistory(summary);
@@ -660,9 +660,9 @@ document.getElementById('confirmAdjust').onclick = () => {
   // 最終チェック
   if (total !== 0) {
     if (total > 0) {
-      alert(`合計が${total}円多いです。修正してください。`);
+      alert(`合計が${total}ソシー多いです。修正してください。`);
     } else {
-      alert(`合計が${Math.abs(total)}円足りません。修正してください。`);
+      alert(`合計が${Math.abs(total)}ソシー足りません。修正してください。`);
     }
     return;
   }
@@ -711,7 +711,7 @@ document.getElementById('confirmAddPlayer').onclick = () => {
     renderBoard();
     updateLeftDisplay();
     addPlayerModal.style.display = 'none';
-    alert(`${name}が復活しました！（残高: ${revivedPlayer.final}円）`);
+    alert(`${name}が復活しました！（残高: ${revivedPlayer.final}ソシー）`);
   } else {
     // 新規追加
     players.push({name: name, balance: 0, outcomeKey: null});
