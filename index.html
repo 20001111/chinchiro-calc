@@ -459,7 +459,8 @@ if (
   }
 
   // ヒフミ絡み（倍付け）
-  if (parentOutcome.key === 'hifumi' || childOutcome.key === 'hifumi') {
+  if ((parentOutcome.key === 'hifumi' || childOutcome.key === 'hifumi') &&
+  parentOutcome.key !== 'shonben' && childOutcome.key !== 'shonben') {
     const hMult = (parentOutcome.key === 'hifumi' ? childOutcome : parentOutcome).mult * 2;
     return [
       parentOutcome.key === 'hifumi' ? 'child' : 'parent',
