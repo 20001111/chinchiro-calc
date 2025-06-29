@@ -212,19 +212,21 @@
     <button id="undoBtn" class="btn-gray">⏪ 戻す</button>
     <button id="redoBtn" class="btn-gray">⏩ 進む</button>
     <button id="addPlayerBtn" class="btn-success">➕ 追加</button>
+    <button id="exitPlayerBtn" class="btn-danger">➖ 退出</button>
     <button id="historyBtn" class="btn-primary">📜 履歴</button>
-    <button id="adjustBtn" class="btn-danger">💰 調整</button>
-    <button id="resetBtn" class="btn-gray">🔄 リセット</button>
+    <button id="adjustBtn" class="btn-warning">💰 調整</button>
   </div>
   
   <div id="scoreBoard"></div>
-  <div id="exitedPlayersArea" class="hidden" style="margin-top:20px;padding:16px;background:#f5f5f5;border-radius:12px;">
-  <h4 style="margin:0 0 12px 0;color:#666;">退出者</h4>
-  <div id="exitedPlayersList"></div>
-</div>
-  <button id="calcRound" class="btn-primary calc-btn" style="width:100%">
+  
+  <button id="calcRound" class="calc-btn btn-primary" style="width:100%">
     🎯 計算して結果を見る
   </button>
+  
+  <div id="exitedPlayersArea" class="hidden" style="margin-top:16px">
+    <h4>退出したプレイヤー</h4>
+    <div id="exitedPlayersList"></div>
+  </div>
 </div>
 
 <div id="summaryOverlay" class="overlay">
@@ -243,7 +245,7 @@ const create = (t, p = {}) => Object.assign(document.createElement(t), p);
 const btn = (txt, cls, fn) => Object.assign(create('button', {textContent: txt}), {className: cls, onclick: fn});
 const intVal = sel => parseInt($(sel).value, 10);
 
-let players = [], parentIndex = 0, historyStack = [], gameHistory = [], roundCounter = 1, exitedPlayers = [];
+let players = [], parentIndex = 0, historyStack = [], redoStack = [], gameHistory = [], roundCounter = 1, exitedPlayers = [];
 
 const outcomes = [
   {key: 'hifumi', label: 'ヒフミ', score: 0, mult: -2, color: 'hifumi'},
@@ -284,7 +286,6 @@ function renderBoard() {
     moveDiv.appendChild(btn('⬇', 'btn-gray', () => movePlayer(i, 1)));
     ops.appendChild(moveDiv);
     
-    
     row.appendChild(ops);
     
     // 数字の役（1段目）
@@ -312,7 +313,10 @@ function renderBoard() {
     row.appendChild(specialRow);
     
     board.appendChild(row);
-     const exitedArea = $('#exitedPlayersArea');
+  });
+  
+  // 退出したプレイヤーの表示
+  const exitedArea = $('#exitedPlayersArea');
   const exitedList = $('#exitedPlayersList');
   if (exitedPlayers.length > 0) {
     exitedArea.classList.remove('hidden');
@@ -322,8 +326,8 @@ function renderBoard() {
   } else {
     exitedArea.classList.add('hidden');
   }
-  });
 }
+
 function showExitPlayerModal() {
   const overlay = createOverlay();
   const box = create('div', {className: 'modal-box'});
@@ -358,6 +362,7 @@ function exitPlayer(index, overlay) {
   overlay.remove();
   renderBoard();
 }
+
 function movePlayer(index, direction) {
   const newIndex = index + direction;
   if (newIndex < 0 || newIndex >= players.length) return;
@@ -366,7 +371,6 @@ function movePlayer(index, direction) {
   if (parentIndex === index) parentIndex = newIndex;
   else if (parentIndex === newIndex) parentIndex = index;
   renderBoard();
-}
 }
 
 $('#toNameStep').onclick = () => {
@@ -526,6 +530,8 @@ $('#addPlayerBtn').onclick = () => {
   input.focus();
 };
 
+$('#exitPlayerBtn').onclick = showExitPlayerModal;
+
 $('#historyBtn').onclick = () => {
   const overlay = createOverlay();
   const box = create('div', {className: 'modal-box', style: 'max-width:600px'});
@@ -574,18 +580,6 @@ $('#adjustBtn').onclick = () => {
   });
   
   box.appendChild(btn('閉じる', 'btn-gray', () => overlay.remove()));
-};
-
-$('#resetBtn').onclick = () => {
-  if (confirm('ゲームをリセットしますか？')) {
-    players.forEach(p => p.balance = 0);
-    historyStack = [];
-    redoStack = [];
-    gameHistory = [];
-    roundCounter = 1;
-    $('#roundCounter').textContent = roundCounter;
-    renderBoard();
-  }
 };
 </script>
 
