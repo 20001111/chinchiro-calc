@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>チンチロ計算アプリ v6.0</title>
+  <title>チンチロ計算アプリ v6.1</title>
   <style>
     :root {
       --main-bg: #1976d2;
@@ -11,106 +11,195 @@
       --danger: #f44336;
       --success: #4caf50;
       --warning: #ff9800;
-      --font: system-ui, sans-serif;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
     * { box-sizing: border-box; }
-    body { font-family: var(--font); margin: 14px; background: #f5f5f5; }
-    h2 { margin-bottom: 14px; color: var(--main-bg); }
-    input, button { font-size: 16px; padding: 8px 12px; margin: 4px; border: 1px solid #ddd; border-radius: 6px; }
-    button { cursor: pointer; border: none; background: var(--main-bg); color: #fff; transition: all 0.2s; }
-    button:hover { opacity: 0.9; transform: translateY(-1px); }
-    button:active { opacity: 0.8; transform: translateY(0); }
-    .hidden { display: none !important; }
-    .flex { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-    .player-row { 
+    body { 
+      font-family: var(--font); 
+      margin: 0; 
+      padding: 12px; 
+      background: #f8f9fa; 
+      font-size: 16px;
+    }
+    h2 { 
+      margin: 0 0 16px 0; 
+      color: var(--main-bg); 
+      font-size: 24px;
+      text-align: center;
+    }
+    input, button { 
+      font-size: 16px; 
+      padding: 12px 16px; 
+      margin: 6px 3px; 
       border: 2px solid #ddd; 
       border-radius: 12px; 
-      padding: 12px; 
-      margin-bottom: 10px; 
-      background: #fff; 
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      font-family: inherit;
+      touch-action: manipulation;
     }
-    .player-main { flex: 1; font-size: 16px; font-weight: 600; }
-    .balance { margin-left: 8px; color: var(--main-bg); }
+    button { 
+      cursor: pointer; 
+      border: none; 
+      background: var(--main-bg); 
+      color: #fff; 
+      transition: all 0.2s; 
+      font-weight: 600;
+      min-height: 44px;
+    }
+    button:active { opacity: 0.8; transform: scale(0.98); }
+    .hidden { display: none !important; }
+    .flex { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+    .player-row { 
+      border: 3px solid #e0e0e0; 
+      border-radius: 16px; 
+      padding: 16px; 
+      margin-bottom: 16px; 
+      background: #fff; 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .player-main { 
+      font-size: 18px; 
+      font-weight: 700; 
+      margin-bottom: 12px;
+    }
+    .balance { 
+      display: block; 
+      color: var(--main-bg); 
+      font-size: 16px;
+      margin-top: 4px;
+    }
     .parent-tag { 
-      background: linear-gradient(45deg, gold, #ffd700); 
+      background: linear-gradient(45deg, #ffd700, #ffed4e); 
       color: #000; 
-      padding: 4px 8px; 
-      border-radius: 12px; 
+      padding: 6px 12px; 
+      border-radius: 20px; 
       margin-left: 8px; 
-      font-size: 12px; 
+      font-size: 14px; 
       font-weight: bold;
+      box-shadow: 0 2px 4px rgba(255,215,0,0.3);
     }
     .parent-highlight { 
-      background: linear-gradient(135deg, #fff3e0, #ffe0b2); 
+      background: linear-gradient(135deg, #fff8e1, #ffecb3); 
       border-color: var(--warning); 
-      box-shadow: 0 0 12px rgba(255,152,0,0.3); 
+      box-shadow: 0 0 16px rgba(255,152,0,0.4); 
     }
     .btn-gray { background: var(--gray); }
     .btn-success { background: var(--success); }
     .btn-danger { background: var(--danger); }
     .btn-warning { background: var(--warning); }
     .btn-primary { background: var(--main-bg); }
-    .outcome-btn { 
-      background: #e0e0e0; 
-      color: #000; 
-      padding: 8px 12px; 
-      font-size: 14px; 
-      border-radius: 8px; 
-      min-width: 60px;
+    .control-btns { 
+      display: grid; 
+      grid-template-columns: repeat(4, 1fr); 
+      gap: 8px; 
+      margin: 12px 0;
     }
-    .outcome-btn.selected { background: var(--success); color: #fff; box-shadow: 0 2px 8px rgba(76,175,80,0.4); }
+    .control-btns button { margin: 0; font-size: 14px; padding: 10px 8px; }
+    .outcome-row { display: flex; gap: 6px; margin: 8px 0; flex-wrap: wrap; }
+    .outcome-btn { 
+      background: #f5f5f5; 
+      color: #333; 
+      padding: 10px 12px; 
+      font-size: 14px; 
+      border-radius: 12px; 
+      font-weight: 600;
+      border: 2px solid #e0e0e0;
+      min-width: 50px;
+      flex: 1;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .outcome-btn.selected { 
+      background: var(--success); 
+      color: #fff; 
+      border-color: var(--success);
+      box-shadow: 0 4px 12px rgba(76,175,80,0.4); 
+    }
+    .outcome-hifumi { background: #ff6b6b !important; color: white !important; }
+    .outcome-hifumi.selected { background: #e74c3c !important; }
+    .outcome-shigoro { background: #ffa726 !important; color: white !important; }
+    .outcome-shigoro.selected { background: #ff9800 !important; }
+    .outcome-arashi { background: #ab47bc !important; color: white !important; }
+    .outcome-arashi.selected { background: #9c27b0 !important; }
+    .outcome-pinzoro { background: #ef5350 !important; color: white !important; }
+    .outcome-pinzoro.selected { background: #f44336 !important; }
     .overlay { 
       position: fixed; 
       top: 0; 
       left: 0; 
       width: 100%; 
       height: 100%; 
-      background: rgba(0,0,0,0.6); 
+      background: rgba(0,0,0,0.7); 
       display: none; 
       align-items: center; 
       justify-content: center; 
-      z-index: 999; 
+      z-index: 999;
+      padding: 20px;
     }
     .overlay.show { display: flex; }
     .modal-box { 
       background: #fff; 
       padding: 24px; 
-      border-radius: 16px; 
-      width: 92%; 
+      border-radius: 20px; 
+      width: 100%; 
       max-width: 500px; 
-      max-height: 80vh; 
+      max-height: 90vh; 
       overflow-y: auto;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     }
-    .stats { background: #e3f2fd; padding: 12px; border-radius: 8px; margin: 10px 0; }
-    @media(max-width:480px) {
-      input, button { font-size: 14px; padding: 6px 8px; }
-      .player-row { padding: 8px; }
-      .player-main { font-size: 14px; }
+    .stats { 
+      background: linear-gradient(135deg, #e3f2fd, #bbdefb); 
+      padding: 16px; 
+      border-radius: 16px; 
+      margin: 16px 0; 
+      box-shadow: 0 2px 8px rgba(25,118,210,0.2);
+    }
+    .calc-btn {
+      font-size: 20px !important;
+      padding: 16px !important;
+      margin: 16px 0 !important;
+      font-weight: 700;
+      box-shadow: 0 4px 16px rgba(25,118,210,0.3);
+    }
+    .top-controls {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .top-controls button { margin: 0; font-size: 14px; padding: 12px 8px; }
+    .move-btns { display: flex; gap: 4px; }
+    .move-btns button { padding: 8px 12px; font-size: 12px; min-width: 35px; }
+    
+    @media (max-width: 600px) {
+      body { padding: 8px; }
+      h2 { font-size: 20px; }
+      .player-main { font-size: 16px; }
+      .control-btns { grid-template-columns: repeat(2, 1fr); }
+      .top-controls { grid-template-columns: repeat(2, 1fr); }
+      .outcome-btn { font-size: 12px; padding: 8px 6px; }
+      .move-btns button { font-size: 10px; padding: 6px 8px; }
     }
   </style>
 </head>
 <body>
 
-<h2>🎲 チンチロ計算アプリ v6.0</h2>
+<h2>🎲 チンチロ計算アプリ v6.1</h2>
 
-<!-- セットアップ画面 -->
 <div id="setupStep">
   <label>プレイヤー人数：
     <input type="number" id="playerCount" value="2" min="2" max="8" style="width:80px">
   </label>
-  <button id="toNameStep" class="btn-primary">次へ (名前入力)</button>
+  <button id="toNameStep" class="btn-primary">次へ</button>
 </div>
 
-<!-- 名前入力画面 -->
 <div id="nameStep" class="hidden">
   <h3>プレイヤーの名前を入力</h3>
   <div id="nameInputs"></div>
-  <button id="startGame" class="btn-success">🎮 ゲーム開始</button>
+  <button id="startGame" class="btn-success">ゲーム開始</button>
 </div>
 
-<!-- ゲーム画面 -->
 <div id="gameArea" class="hidden">
   <div class="stats">
     <div class="flex">
@@ -119,25 +208,25 @@
     </div>
   </div>
   
-  <div id="topControls" class="flex" style="margin:10px 0">
+  <div class="top-controls">
     <button id="undoBtn" class="btn-gray">⏪ 戻す</button>
+    <button id="redoBtn" class="btn-gray">⏩ 進む</button>
     <button id="addPlayerBtn" class="btn-success">➕ 追加</button>
-    <button id="showLeftBtn" class="btn-warning">👋 退出者</button>
     <button id="historyBtn" class="btn-primary">📜 履歴</button>
     <button id="adjustBtn" class="btn-danger">💰 調整</button>
     <button id="resetBtn" class="btn-gray">🔄 リセット</button>
   </div>
   
   <div id="scoreBoard"></div>
-  
-  <button id="calcRound" class="btn-primary" style="width:100%;margin-top:12px;font-size:18px">
+   <div id="exitedPlayersArea" class="hidden" style="margin-top:20px;padding:16px;background:#f5f5f5;border-radius:12px;">
+    <h4 style="margin:0 0 12px 0;color:#666;">退出者</h4>
+  <div id="exitedPlayersList"></div>
+ </div>
+  <button id="calcRound" class="btn-primary calc-btn" style="width:100%">
     🎯 計算して結果を見る
   </button>
-
-  <div id="leftList" class="hidden"></div>
 </div>
 
-<!-- 結果表示モーダル -->
 <div id="summaryOverlay" class="overlay">
   <div class="modal-box" style="max-width:420px;text-align:center">
     <h3>🎊 ラウンド結果</h3>
@@ -149,33 +238,27 @@
 <div id="modalContainer"></div>
 
 <script>
-// ヘルパー関数
-const $ = (s, b = document) => b.querySelector(s);
-const $$ = (s, b = document) => [...b.querySelectorAll(s)];
+const $ = s => document.querySelector(s);
 const create = (t, p = {}) => Object.assign(document.createElement(t), p);
 const btn = (txt, cls, fn) => Object.assign(create('button', {textContent: txt}), {className: cls, onclick: fn});
-const swap = (arr, i, j) => ([arr[i], arr[j]] = [arr[j], arr[i]]);
 const intVal = sel => parseInt($(sel).value, 10);
 
-// ゲームデータ
-let players = [], parentIndex = 0, historyStack = [], leftPlayers = [], gameHistory = [], roundCounter = 1;
+let players = [], parentIndex = 0, historyStack = [], redoStack = [], gameHistory = [], roundCounter = 1;
 
-// 役の定義（キー、表示名、スコア、倍率）
 const outcomes = [
-  ['hifumi', 'ヒフミ', 0, -2],
-  ['0', '0', 10, 0],
-  ['1', '1', 20, 1],
-  ['2', '2', 30, 1],
-  ['3', '3', 40, 1],
-  ['4', '4', 50, 1],
-  ['5', '5', 60, 1],
-  ['6', '6', 70, 1],
-  ['shigoro', 'シゴロ', 80, 2],
-  ['arashi', 'アラシ', 90, 3],
-  ['pinzoro', 'ピンゾロ', 100, 5]
-].map(([key, label, score, mult]) => ({key, label, score, mult}));
+  {key: 'hifumi', label: 'ヒフミ', score: 0, mult: -2, color: 'hifumi'},
+  {key: '0', label: '0', score: 10, mult: 0},
+  {key: '1', label: '1', score: 20, mult: 1},
+  {key: '2', label: '2', score: 30, mult: 1},
+  {key: '3', label: '3', score: 40, mult: 1},
+  {key: '4', label: '4', score: 50, mult: 1},
+  {key: '5', label: '5', score: 60, mult: 1},
+  {key: '6', label: '6', score: 70, mult: 1},
+  {key: 'shigoro', label: 'シゴロ', score: 80, mult: 2, color: 'shigoro'},
+  {key: 'arashi', label: 'アラシ', score: 90, mult: 3, color: 'arashi'},
+  {key: 'pinzoro', label: 'ピンゾロ', score: 100, mult: 5, color: 'pinzoro'}
+];
 
-// プレイヤーボード描画
 function renderBoard() {
   const board = $('#scoreBoard');
   board.innerHTML = '';
@@ -183,56 +266,112 @@ function renderBoard() {
   players.forEach((player, i) => {
     const row = create('div', {className: `player-row ${i === parentIndex ? 'parent-highlight' : ''}`});
     
-    // プレイヤー情報
     const main = create('div', {
       className: 'player-main',
       innerHTML: `${player.name}${i === parentIndex ? '<span class="parent-tag">親</span>' : ''}<span class="balance">${player.balance}ソシー</span>`
     });
     row.appendChild(main);
     
-    // 操作ボタン
-    const ops = create('div', {className: 'flex'});
+    const ops = create('div', {className: 'control-btns'});
     ops.appendChild(btn('親', 'btn-warning', () => {
       parentIndex = i;
       players.forEach(p => p.outcome = null);
       renderBoard();
     }));
-    ops.appendChild(btn('↑', 'btn-gray', () => {
-      if (i > 0) {
-        swap(players, i, i - 1);
-        if (parentIndex === i) parentIndex--;
-        else if (parentIndex === i - 1) parentIndex++;
-        renderBoard();
-      }
-    }));
-    ops.appendChild(btn('↓', 'btn-gray', () => {
-      if (i < players.length - 1) {
-        swap(players, i, i + 1);
-        if (parentIndex === i) parentIndex++;
-        else if (parentIndex === i + 1) parentIndex--;
-        renderBoard();
-      }
-    }));
+    
+    const moveDiv = create('div', {className: 'move-btns'});
+    moveDiv.appendChild(btn('⬆', 'btn-gray', () => movePlayer(i, -1)));
+    moveDiv.appendChild(btn('⬇', 'btn-gray', () => movePlayer(i, 1)));
+    ops.appendChild(moveDiv);
+    
+    ops.appendChild(btn('退出者', 'btn-danger', () => showExitPlayerModal()));
     row.appendChild(ops);
     
-    // 役選択ボタン
-    const panel = create('div', {className: 'flex', style: 'margin-top:8px'});
-    outcomes.forEach(outcome => {
+    // 数字の役（1段目）
+    const numberRow = create('div', {className: 'outcome-row'});
+    outcomes.slice(1, 8).forEach(outcome => {
       const b = btn(outcome.label, 'outcome-btn', () => {
         player.outcome = outcome;
         renderBoard();
       });
       if (player.outcome?.key === outcome.key) b.classList.add('selected');
-      panel.appendChild(b);
+      numberRow.appendChild(b);
     });
-    row.appendChild(panel);
+    row.appendChild(numberRow);
+    
+    // 特殊役（2段目）
+    const specialRow = create('div', {className: 'outcome-row'});
+    [outcomes[0], ...outcomes.slice(8)].forEach(outcome => {
+      const b = btn(outcome.label, `outcome-btn ${outcome.color ? `outcome-${outcome.color}` : ''}`, () => {
+        player.outcome = outcome;
+        renderBoard();
+      });
+      if (player.outcome?.key === outcome.key) b.classList.add('selected');
+      specialRow.appendChild(b);
+    });
+    row.appendChild(specialRow);
+    
     board.appendChild(row);
   });
-  
-  updateLeftDisplay();
+  // 退出者表示の更新
++  const exitedArea = $('#exitedPlayersArea');
++  const exitedList = $('#exitedPlayersList');
++  if (exitedPlayers.length > 0) {
++    exitedArea.classList.remove('hidden');
++    exitedList.innerHTML = exitedPlayers.map(p => 
++      `<div style="margin:4px 0;padding:8px;background:#fff;border-radius:8px;">${p.name}: ${p.balance}ソシー</div>`
++    ).join('');
++  } else {
++    exitedArea.classList.add('hidden');
++  }
 }
 
-// 画面遷移
+function movePlayer(index, direction) {
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= players.length) return;
+  
+  [players[index], players[newIndex]] = [players[newIndex], players[index]];
+  if (parentIndex === index) parentIndex = newIndex;
+  else if (parentIndex === newIndex) parentIndex = index;
+  renderBoard();
+}
++let exitedPlayers = [];
++
++function showExitPlayerModal() {
++  const overlay = createOverlay();
++  const box = create('div', {className: 'modal-box'});
++  overlay.appendChild(box);
++  
++  box.appendChild(create('h3', {textContent: '退出するプレイヤーを選択'}));
++  
++  players.forEach((player, i) => {
++    const div = create('div', {style: 'margin:8px 0'});
++    const btn = create('button', {
++      textContent: `${player.name} (${player.balance}ソシー)`,
++      className: 'btn-danger',
++      style: 'width:100%;margin:4px 0',
++      onclick: () => exitPlayer(i, overlay)
++    });
++    div.appendChild(btn);
++    box.appendChild(div);
++  });
++  
++  box.appendChild(btn('キャンセル', 'btn-gray', () => overlay.remove()));
++}
++
++function exitPlayer(index, overlay) {
++  if (players.length <= 2) return alert('プレイヤーは2人以上必要です');
++  
++  const exitedPlayer = players[index];
++  exitedPlayers.push({name: exitedPlayer.name, balance: exitedPlayer.balance});
++  
++  players.splice(index, 1);
++  if (parentIndex >= index) parentIndex = Math.max(0, parentIndex - 1);
++  
++  overlay.remove();
++  renderBoard();
++}
+
 $('#toNameStep').onclick = () => {
   const n = intVal('#playerCount');
   if (n < 2 || isNaN(n)) return alert('2人以上入力してください');
@@ -260,6 +399,7 @@ $('#startGame').onclick = () => {
   
   parentIndex = 0;
   historyStack = [];
+  redoStack = [];
   gameHistory = [];
   roundCounter = 1;
   
@@ -268,7 +408,6 @@ $('#startGame').onclick = () => {
   renderBoard();
 };
 
-// 対戦計算
 function calcBattle(parentOutcome, childOutcome, rate) {
   if (parentOutcome.key === childOutcome.key) {
     return ['parent', rate * parentOutcome.mult, '同役で親勝ち'];
@@ -284,7 +423,6 @@ function calcBattle(parentOutcome, childOutcome, rate) {
   return [winner, rate * mult, `${mult}倍`];
 }
 
-// ラウンド計算
 $('#calcRound').onclick = () => {
   const rate = intVal('#rateInput');
   if (rate <= 0 || isNaN(rate)) return alert('正しいレートを入力してください');
@@ -294,8 +432,8 @@ $('#calcRound').onclick = () => {
     return alert(unselected.map(p => p.name).join(', ') + ' の役が未選択です');
   }
   
-  // 履歴保存
   historyStack.push(JSON.parse(JSON.stringify({players, parentIndex, roundCounter})));
+  redoStack = [];
   
   const parent = players[parentIndex];
   let log = `ラウンド ${roundCounter}\n親: ${parent.name} (${parent.outcome.label})\n\n`;
@@ -324,7 +462,6 @@ $('#calcRound').onclick = () => {
   renderBoard();
 };
 
-// 次のラウンド
 $('#nextRoundBtn').onclick = () => {
   players.forEach(p => p.outcome = null);
   parentIndex = (parentIndex + 1) % players.length;
@@ -334,20 +471,30 @@ $('#nextRoundBtn').onclick = () => {
   renderBoard();
 };
 
-// 1手戻す
 $('#undoBtn').onclick = () => {
   if (!historyStack.length) return alert('戻す履歴がありません');
   
+  redoStack.push(JSON.parse(JSON.stringify({players, parentIndex, roundCounter})));
   const state = historyStack.pop();
   players = state.players;
   parentIndex = state.parentIndex;
   roundCounter = state.roundCounter;
   $('#roundCounter').textContent = roundCounter;
   renderBoard();
-  alert('1手戻しました');
 };
 
-// 共通オーバーレイ作成
+$('#redoBtn').onclick = () => {
+  if (!redoStack.length) return alert('進む履歴がありません');
+  
+  historyStack.push(JSON.parse(JSON.stringify({players, parentIndex, roundCounter})));
+  const state = redoStack.pop();
+  players = state.players;
+  parentIndex = state.parentIndex;
+  roundCounter = state.roundCounter;
+  $('#roundCounter').textContent = roundCounter;
+  renderBoard();
+};
+
 function createOverlay() {
   const overlay = create('div', {className: 'overlay show'});
   overlay.onclick = e => e.target === overlay && overlay.remove();
@@ -355,7 +502,6 @@ function createOverlay() {
   return overlay;
 }
 
-// プレイヤー追加
 $('#addPlayerBtn').onclick = () => {
   const overlay = createOverlay();
   const box = create('div', {className: 'modal-box'});
@@ -375,15 +521,7 @@ $('#addPlayerBtn').onclick = () => {
     const name = input.value.trim();
     if (!name) return alert('名前を入力してください');
     
-    const leftIndex = leftPlayers.findIndex(p => p.name === name);
-    if (leftIndex !== -1) {
-      players.push({name: leftPlayers[leftIndex].name, balance: leftPlayers[leftIndex].final});
-      leftPlayers.splice(leftIndex, 1);
-      alert(`${name} が復活しました`);
-    } else {
-      players.push({name, balance: 0});
-    }
-    
+    players.push({name, balance: 0});
     renderBoard();
     overlay.remove();
   }));
@@ -391,37 +529,6 @@ $('#addPlayerBtn').onclick = () => {
   input.focus();
 };
 
-// プレイヤー退出
-$('#showLeftBtn').onclick = () => {
-  if (!players.length) return alert('プレイヤーがいません');
-  
-  const overlay = createOverlay();
-  const box = create('div', {className: 'modal-box'});
-  overlay.appendChild(box);
-  
-  box.appendChild(create('h3', {textContent: '退出するプレイヤーを選択'}));
-  
-  players.forEach((player, i) => {
-    const div = create('div', {
-      textContent: `${player.name} (${player.balance}ソシー)`,
-      className: 'player-row',
-      style: 'cursor:pointer;margin:5px 0'
-    });
-    div.onclick = () => {
-      players.splice(i, 1);
-      leftPlayers.push({name: player.name, final: player.balance});
-      if (parentIndex >= i) parentIndex = Math.max(0, parentIndex - 1);
-      renderBoard();
-      overlay.remove();
-      alert(`${player.name} を退出させました`);
-    };
-    box.appendChild(div);
-  });
-  
-  box.appendChild(btn('閉じる', 'btn-gray', () => overlay.remove()));
-};
-
-// 履歴表示
 $('#historyBtn').onclick = () => {
   const overlay = createOverlay();
   const box = create('div', {className: 'modal-box', style: 'max-width:600px'});
@@ -446,7 +553,6 @@ $('#historyBtn').onclick = () => {
   box.appendChild(footer);
 };
 
-// 金額調整
 $('#adjustBtn').onclick = () => {
   const overlay = createOverlay();
   const box = create('div', {className: 'modal-box'});
@@ -454,7 +560,7 @@ $('#adjustBtn').onclick = () => {
   
   box.appendChild(create('h3', {textContent: '金額調整'}));
   
-  players.forEach((player, i) => {
+  players.forEach(player => {
     const div = create('div', {className: 'flex', style: 'margin:8px 0;align-items:center'});
     div.appendChild(create('span', {textContent: `${player.name}: `, style: 'min-width:100px'}));
     const input = create('input', {
@@ -473,30 +579,17 @@ $('#adjustBtn').onclick = () => {
   box.appendChild(btn('閉じる', 'btn-gray', () => overlay.remove()));
 };
 
-// ゲームリセット
 $('#resetBtn').onclick = () => {
-  if (confirm('ゲームをリセットしますか？すべてのデータが消去されます。')) {
+  if (confirm('ゲームをリセットしますか？')) {
     players.forEach(p => p.balance = 0);
     historyStack = [];
+    redoStack = [];
     gameHistory = [];
-    leftPlayers = [];
     roundCounter = 1;
     $('#roundCounter').textContent = roundCounter;
     renderBoard();
-    alert('ゲームをリセットしました');
   }
 };
-
-// 退出者リスト更新
-function updateLeftDisplay() {
-  const leftList = $('#leftList');
-  if (leftPlayers.length === 0) {
-    leftList.classList.add('hidden');
-  } else {
-    leftList.classList.remove('hidden');
-    leftList.textContent = '退出者:\n' + leftPlayers.map(p => `${p.name}: ${p.final}ソシー`).join('\n');
-  }
-}
 </script>
 
 </body>
