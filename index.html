@@ -218,7 +218,10 @@
   </div>
   
   <div id="scoreBoard"></div>
-  
+  <div id="exitedPlayersArea" class="hidden" style="margin-top:20px;padding:16px;background:#f5f5f5;border-radius:12px;">
+  <h4 style="margin:0 0 12px 0;color:#666;">退出者</h4>
+  <div id="exitedPlayersList"></div>
+</div>
   <button id="calcRound" class="btn-primary calc-btn" style="width:100%">
     🎯 計算して結果を見る
   </button>
@@ -240,7 +243,7 @@ const create = (t, p = {}) => Object.assign(document.createElement(t), p);
 const btn = (txt, cls, fn) => Object.assign(create('button', {textContent: txt}), {className: cls, onclick: fn});
 const intVal = sel => parseInt($(sel).value, 10);
 
-let players = [], parentIndex = 0, historyStack = [], redoStack = [], gameHistory = [], roundCounter = 1;
+let players = [], parentIndex = 0, historyStack = [], gameHistory = [], roundCounter = 1, exitedPlayers = [];
 
 const outcomes = [
   {key: 'hifumi', label: 'ヒフミ', score: 0, mult: -2, color: 'hifumi'},
@@ -309,9 +312,52 @@ function renderBoard() {
     row.appendChild(specialRow);
     
     board.appendChild(row);
+     const exitedArea = $('#exitedPlayersArea');
+  const exitedList = $('#exitedPlayersList');
+  if (exitedPlayers.length > 0) {
+    exitedArea.classList.remove('hidden');
+    exitedList.innerHTML = exitedPlayers.map(p => 
+      `<div style="margin:4px 0;padding:8px;background:#fff;border-radius:8px;">${p.name}: ${p.balance}ソシー</div>`
+    ).join('');
+  } else {
+    exitedArea.classList.add('hidden');
+  }
   });
 }
+function showExitPlayerModal() {
+  const overlay = createOverlay();
+  const box = create('div', {className: 'modal-box'});
+  overlay.appendChild(box);
+  
+  box.appendChild(create('h3', {textContent: '退出するプレイヤーを選択'}));
+  
+  players.forEach((player, i) => {
+    const div = create('div', {style: 'margin:8px 0'});
+    const btn = create('button', {
+      textContent: `${player.name} (${player.balance}ソシー)`,
+      className: 'btn-danger',
+      style: 'width:100%;margin:4px 0',
+      onclick: () => exitPlayer(i, overlay)
+    });
+    div.appendChild(btn);
+    box.appendChild(div);
+  });
+  
+  box.appendChild(btn('キャンセル', 'btn-gray', () => overlay.remove()));
+}
 
+function exitPlayer(index, overlay) {
+  if (players.length <= 2) return alert('プレイヤーは2人以上必要です');
+  
+  const exitedPlayer = players[index];
+  exitedPlayers.push({name: exitedPlayer.name, balance: exitedPlayer.balance});
+  
+  players.splice(index, 1);
+  if (parentIndex >= index) parentIndex = Math.max(0, parentIndex - 1);
+  
+  overlay.remove();
+  renderBoard();
+}
 function movePlayer(index, direction) {
   const newIndex = index + direction;
   if (newIndex < 0 || newIndex >= players.length) return;
