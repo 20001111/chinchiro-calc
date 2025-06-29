@@ -420,41 +420,51 @@ $('#startGame').onclick = () => {
 };
 
 function calcBattle(parentOutcome, childOutcome, rate) {
-const shonbenIsParent = parentOutcome.key==='shonben';
-const opponent       = shonbenIsParent ? childOutcome : parentOutcome;
-  let mult = 1;               // デフォルト 1 倍
-  switch (opponent.key) {
-    case 'pinzoro': mult = 5; break;   // ピンゾロ
-    case 'arashi' : mult = 3; break;   // アラシ
-    case 'shigoro': mult = 2; break;   // 4-5-6
-    case 'hifumi' : mult = 1; break;   // 1-2-3
-    // 数字役 (1-6) や 0 はここに来ないが、来ても 1 倍で OK
-  }
-  const amount = rate * mult;
+  // ――― 基本倍率の判定 ―――
+  const shonbenIsParent = parentOutcome.key === 'shonben';
+  const opponent        = shonbenIsParent ? childOutcome : parentOutcome;
 
-   if (
+  let baseMult = 1;                      // デフォルト 1 倍
+  switch (opponent.key) {
+    case 'pinzoro': baseMult = 5; break;
+    case 'arashi' : baseMult = 3; break;
+    case 'shigoro': baseMult = 2; break;
+    case 'hifumi' : baseMult = 1; break;
+  }
+
+  // 0 vs ヒフミ（2倍）
+  if (
     (parentOutcome.key === '0' && childOutcome.key === 'hifumi') ||
     (parentOutcome.key === 'hifumi' && childOutcome.key === '0')
   ) {
-    return {
-      winner: parentOutcome.key === '0' ? 'parent' : 'child',
-      amount: rate * 2,                 // ← ここを 0 → rate*2 に
-      reason: 'ヒフミは 0 に 2 倍で負け'
-    };
+    return [
+      parentOutcome.key === '0' ? 'parent' : 'child',
+      rate * 2,
+      'ヒフミは 0 に 2 倍で負け'
+    ];
   }
+
+  // 同役は親勝ち
   if (parentOutcome.key === childOutcome.key) {
     return ['parent', rate * parentOutcome.mult, '同役で親勝ち'];
   }
-  
+
+  // ヒフミ絡み（倍付け）
   if (parentOutcome.key === 'hifumi' || childOutcome.key === 'hifumi') {
-    const mult = (parentOutcome.key === 'hifumi' ? childOutcome : parentOutcome).mult * 2;
-    return [parentOutcome.key === 'hifumi' ? 'child' : 'parent', rate * mult, 'ヒフミ倍付け'];
+    const hMult = (parentOutcome.key === 'hifumi' ? childOutcome : parentOutcome).mult * 2;
+    return [
+      parentOutcome.key === 'hifumi' ? 'child' : 'parent',
+      rate * hMult,
+      'ヒフミ倍付け'
+    ];
   }
-  
-  const winner = parentOutcome.score > childOutcome.score ? 'parent' : 'child';
-  const mult = (winner === 'parent' ? parentOutcome : childOutcome).mult;
-  return [winner, rate * rankmult, `${rankMul}倍`];
+
+  // 通常判定
+  const winner      = parentOutcome.score > childOutcome.score ? 'parent' : 'child';
+  const winnerMult  = (winner === 'parent' ? parentOutcome : childOutcome).mult;
+  return [winner, rate * winnerMult, `${winnerMult}倍`];
 }
+
 
 $('#calcRound').onclick = () => {
   const rate = intVal('#rateInput');
