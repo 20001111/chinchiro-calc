@@ -443,7 +443,16 @@ function calcBattle(parentOutcome, childOutcome, rate) {
       'ヒフミは 0 に 2 倍で負け'
     ];
   }
-
+if (
+   (parentOutcome.key === 'shonben' && childOutcome.key === 'hifumi') ||
+    (parentOutcome.key === 'hifumi'  && childOutcome.key === 'shonben')
+ ) {
+    return [
+      parentOutcome.key === 'hifumi' ? 'parent' : 'child',  // ヒフミ側が勝者
+      rate,                                                 // 1倍
+      'ヒフミがションベンに1倍勝ち'
+    ];
+  }
   // 同役は親勝ち
   if (parentOutcome.key === childOutcome.key) {
     return ['parent', rate * parentOutcome.mult, '同役で親勝ち'];
