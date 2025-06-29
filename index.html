@@ -452,7 +452,7 @@ const opponent       = shonbenIsParent ? childOutcome : parentOutcome;
   
   const winner = parentOutcome.score > childOutcome.score ? 'parent' : 'child';
   const mult = (winner === 'parent' ? parentOutcome : childOutcome).mult;
-  return [winner, rate * mult, `${rankMul}倍`];
+  return [winner, rate * rankmult, `${rankMul}倍`];
 }
 
 $('#calcRound').onclick = () => {
