@@ -298,7 +298,7 @@ function renderBoard() {
     
     // 数字の役（1段目）
     const numberRow = create('div', {className: 'outcome-row number'});
-    outcomes.slice(1, 8).forEach(outcome => {
+    outcomes.slice(2, 9).forEach(outcome => {
       const b = btn(outcome.label, 'outcome-btn', () => {
         player.outcome = outcome;
         renderBoard();
