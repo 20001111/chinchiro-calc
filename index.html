@@ -527,6 +527,20 @@ $('#addPlayerBtn').onclick = () => {
     const name = input.value.trim();
     if (!name) return alert('名前を入力してください');
     
+    // --- 退出者に同名がいないか確認 ---
+const idx = exitedPlayers.findIndex(p => p.name === name);
+if (idx !== -1) {                       // いたら復活！
+  players.push({
+    name: exitedPlayers[idx].name,
+    balance: exitedPlayers[idx].balance // 残高そのまま
+  });
+  exitedPlayers.splice(idx, 1);         // 退出リストから削除
+  renderBoard();
+  overlay.remove();
+  return;                               // ここで処理終了
+}
+// ------------------------------------
+
     players.push({name, balance: 0});
     renderBoard();
     overlay.remove();
