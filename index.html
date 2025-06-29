@@ -310,7 +310,7 @@ function renderBoard() {
     
     // 特殊役（2段目）
     const specialRow = create('div', {className: 'outcome-row'});
-    [outcomes.find(...), outcomes[0], ...outcomes.slice(8)]
+    [outcomes.find(o => o.key === 'shonben'), outcomes[0], ...outcomes.slice(8)]
    .forEach(outcome => {
       const b = btn(outcome.label, `outcome-btn ${outcome.color ? `outcome-${outcome.color}` : ''}`, () => {
         player.outcome = outcome;
