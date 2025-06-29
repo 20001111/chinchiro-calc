@@ -284,7 +284,7 @@ function renderBoard() {
     moveDiv.appendChild(btn('⬇', 'btn-gray', () => movePlayer(i, 1)));
     ops.appendChild(moveDiv);
     
-    ops.appendChild(btn('削除', 'btn-danger', () => removePlayer(i)));
+    
     row.appendChild(ops);
     
     // 数字の役（1段目）
@@ -367,14 +367,6 @@ function movePlayer(index, direction) {
   else if (parentIndex === newIndex) parentIndex = index;
   renderBoard();
 }
-
-function removePlayer(index) {
-  if (players.length <= 2) return alert('プレイヤーは2人以上必要です');
-  if (confirm(`${players[index].name}を削除しますか？`)) {
-    players.splice(index, 1);
-    if (parentIndex >= index) parentIndex = Math.max(0, parentIndex - 1);
-    renderBoard();
-  }
 }
 
 $('#toNameStep').onclick = () => {
