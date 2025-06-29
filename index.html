@@ -415,6 +415,16 @@ $('#startGame').onclick = () => {
 };
 
 function calcBattle(parentOutcome, childOutcome, rate) {
+   if (
+    (parentOutcome.key === '0' && childOutcome.key === 'hifumi') ||
+    (parentOutcome.key === 'hifumi' && childOutcome.key === '0')
+  ) {
+    return {
+      winner: parentOutcome.key === '0' ? 'parent' : 'child',
+      amount: rate * 2,                 // ← ここを 0 → rate*2 に
+      reason: 'ヒフミはションベンに 2 倍で負け'
+    };
+  }
   if (parentOutcome.key === childOutcome.key) {
     return ['parent', rate * parentOutcome.mult, '同役で親勝ち'];
   }
