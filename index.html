@@ -137,6 +137,10 @@
       z-index: 999;
       padding: 20px;
     }
+    .outcome-row.number { flex-wrap: nowrap; }
+.outcome-row.number .outcome-btn {       /* gap(6px) を引いて 100/6% */
+  flex: 0 0 calc(16.66% - 6px);
+}
     .overlay.show { display: flex; }
     .modal-box { 
       background: #fff; 
@@ -289,7 +293,7 @@ function renderBoard() {
     row.appendChild(ops);
     
     // 数字の役（1段目）
-    const numberRow = create('div', {className: 'outcome-row'});
+    const numberRow = create('div', {className: 'outcome-row number'});
     outcomes.slice(1, 8).forEach(outcome => {
       const b = btn(outcome.label, 'outcome-btn', () => {
         player.outcome = outcome;
